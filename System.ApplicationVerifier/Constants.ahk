@@ -1,0 +1,1 @@
+﻿AVRF_MAX_TRACES := 32

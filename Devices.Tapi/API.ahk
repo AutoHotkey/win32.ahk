@@ -1,0 +1,31 @@
+﻿#Requires AutoHotkey v2.1-alpha.37
+#Include "..\_header.ahk"
+#Import "Types.ahk" {*}
+#Import "..\Foundation\Types.ahk" {HWND, PSTR, PWSTR}
+
+lineAccept(hCall, lpsUserUserInfo, dwSize)
+  => DllCall("TAPI32.dll\lineAccept", UInt32, hCall, PSTR, lpsUserUserInfo, UInt32, dwSize, Int32)
+lineAddProvider(lpszProviderFilename, hwndOwner, lpdwPermanentProviderID)
+  => DllCall("TAPI32.dll\lineAddProviderW", "Str", lpszProviderFilename, HWND, hwndOwner, UInt32.Ptr, lpdwPermanentProviderID, Int32)
+lineAddToConference(hConfCall, hConsultCall)
+  => DllCall("TAPI32.dll\lineAddToConference", UInt32, hConfCall, UInt32, hConsultCall, Int32)
+lineAgentSpecific(hLine, dwAddressID, dwAgentExtensionIDIndex, lpParams, dwSize)
+  => DllCall("TAPI32.dll\lineAgentSpecific", UInt32, hLine, UInt32, dwAddressID, UInt32, dwAgentExtensionIDIndex, Struct.Ptr, lpParams, UInt32, dwSize, Int32)
+lineAnswer(hCall, lpsUserUserInfo, dwSize)
+  => DllCall("TAPI32.dll\lineAnswer", UInt32, hCall, PSTR, lpsUserUserInfo, UInt32, dwSize, Int32)
+lineBlindTransfer(hCall, lpszDestAddressW, dwCountryCode)
+  => DllCall("TAPI32.dll\lineBlindTransferW", UInt32, hCall, "Str", lpszDestAddressW, UInt32, dwCountryCode, Int32)
+lineClose(hLine)
+  => DllCall("TAPI32.dll\lineClose", UInt32, hLine, Int32)
+lineCompleteCall(hCall, lpdwCompletionID, dwCompletionMode, dwMessageID)
+  => DllCall("TAPI32.dll\lineCompleteCall", UInt32, hCall, UInt32.Ptr, lpdwCompletionID, UInt32, dwCompletionMode, UInt32, dwMessageID, Int32)
+lineCompleteTransfer(hCall, hConsultCall, lphConfCall, dwTransferMode)
+  => DllCall("TAPI32.dll\lineCompleteTransfer", UInt32, hCall, UInt32, hConsultCall, UInt32.Ptr, lphConfCall, UInt32, dwTransferMode, Int32)
+lineConfigDialog(dwDeviceID, hwndOwner, lpszDeviceClass)
+  => DllCall("TAPI32.dll\lineConfigDialogW", UInt32, dwDeviceID, HWND, hwndOwner, "Str", lpszDeviceClass, Int32)
+lineConfigDialogEdit(dwDeviceID, hwndOwner, lpszDeviceClass, lpDeviceConfigIn, dwSize, lpDeviceConfigOut)
+  => DllCall("TAPI32.dll\lineConfigDialogEditW", UInt32, dwDeviceID, HWND, hwndOwner, "Str", lpszDeviceClass, Struct.Ptr, lpDeviceConfigIn, UInt32, dwSize, VARSTRING.Ptr, lpDeviceConfigOut, Int32)
+lineConfigProvider(hwndOwner, dwPermanentProviderID)
+  => DllCall("TAPI32.dll\lineConfigProvider", HWND, hwndOwner, UInt32, dwPermanentProviderID, Int32)
+lineCreateAgent(hLine, lpszAgentID?, lpszAgentPIN?, lphAgent)
+  => DllCall("TAPI32.dll\lineCreateAgentW", UInt32, hLine, "Str", lpszAgentID?, "Str", lpszAgentPIN?, UInt32.Ptr, lphAgent, Int32)

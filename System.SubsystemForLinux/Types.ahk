@@ -1,0 +1,9 @@
+﻿#Requires AutoHotkey v2.1-alpha.37
+#Include "..\_header.ahk"
+
+struct WSL_DISTRIBUTION_FLAGS extends Int32 {
+    static WSL_DISTRIBUTION_FLAGS_NONE := 0
+    static WSL_DISTRIBUTION_FLAGS_ENABLE_INTEROP := 1
+    static WSL_DISTRIBUTION_FLAGS_APPEND_NT_PATH := 2
+    static WSL_DISTRIBUTION_FLAGS_ENABLE_DRIVE_MOUNTING := 4
+}

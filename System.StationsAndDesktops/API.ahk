@@ -1,0 +1,48 @@
+﻿#Requires AutoHotkey v2.1-alpha.37
+#Include "..\_header.ahk"
+#Import "Types.ahk" {*}
+#Import "..\Foundation\Types.ahk" {BOOL, HANDLE, LPARAM, PWSTR, WPARAM}
+#Import "..\Graphics.Gdi\Types.ahk" {DEVMODEW}
+#Import "..\Security\Types.ahk" {SECURITY_ATTRIBUTES}
+#Import "..\UI.WindowsAndMessaging\Types.ahk" {WNDENUMPROC}
+
+BroadcastSystemMessage(flags, lpInfo?, Msg, wParam1, lParam1)
+  => DllCall("USER32.dll\BroadcastSystemMessageW", BROADCAST_SYSTEM_MESSAGE_FLAGS, flags, BROADCAST_SYSTEM_MESSAGE_INFO.Ptr, lpInfo?, UInt32, Msg, WPARAM, wParam1, LPARAM, lParam1, Int32)
+BroadcastSystemMessageEx(flags, lpInfo?, Msg, wParam1, lParam1, pbsmInfo?)
+  => DllCall("USER32.dll\BroadcastSystemMessageExW", BROADCAST_SYSTEM_MESSAGE_FLAGS, flags, BROADCAST_SYSTEM_MESSAGE_INFO.Ptr, lpInfo?, UInt32, Msg, WPARAM, wParam1, LPARAM, lParam1, BSMINFO.Ptr, pbsmInfo?, Int32)
+CloseDesktop(hDesktop)
+  => DllCall("USER32.dll\CloseDesktop", HDESK, hDesktop, BOOL)
+CloseWindowStation(hWinSta1)
+  => DllCall("USER32.dll\CloseWindowStation", HWINSTA, hWinSta1, BOOL)
+CreateDesktop(lpszDesktop, dwFlags, dwDesiredAccess, lpsa?)
+  => DllCall("USER32.dll\CreateDesktopW", "Str", lpszDesktop, "Ptr", 0, "Ptr", 0, DESKTOP_CONTROL_FLAGS, dwFlags, UInt32, dwDesiredAccess, SECURITY_ATTRIBUTES.Ptr, lpsa?, HDESK)
+CreateDesktopEx(lpszDesktop, dwFlags, dwDesiredAccess, lpsa?, ulHeapSize)
+  => DllCall("USER32.dll\CreateDesktopExW", "Str", lpszDesktop, "Ptr", 0, "Ptr", 0, DESKTOP_CONTROL_FLAGS, dwFlags, UInt32, dwDesiredAccess, SECURITY_ATTRIBUTES.Ptr, lpsa?, UInt32, ulHeapSize, "Ptr", 0, HDESK)
+CreateWindowStation(lpwinsta?, dwFlags, dwDesiredAccess, lpsa?)
+  => DllCall("USER32.dll\CreateWindowStationW", "Str", lpwinsta?, UInt32, dwFlags, UInt32, dwDesiredAccess, SECURITY_ATTRIBUTES.Ptr, lpsa?, HWINSTA)
+EnumDesktopWindows(hDesktop?, lpfn, lParam1)
+  => DllCall("USER32.dll\EnumDesktopWindows", HDESK, hDesktop?, WNDENUMPROC, lpfn, LPARAM, lParam1, BOOL)
+EnumDesktops(hwinsta1?, lpEnumFunc, lParam1)
+  => DllCall("USER32.dll\EnumDesktopsW", HWINSTA, hwinsta1?, DESKTOPENUMPROCW, lpEnumFunc, LPARAM, lParam1, BOOL)
+EnumWindowStations(lpEnumFunc, lParam1)
+  => DllCall("USER32.dll\EnumWindowStationsW", WINSTAENUMPROCW, lpEnumFunc, LPARAM, lParam1, BOOL)
+GetProcessWindowStation()
+  => DllCall("USER32.dll\GetProcessWindowStation", HWINSTA)
+GetThreadDesktop(dwThreadId)
+  => DllCall("USER32.dll\GetThreadDesktop", UInt32, dwThreadId, HDESK)
+GetUserObjectInformation(hObj, nIndex, pvInfo?, lpnLengthNeeded?)
+  => DllCall("USER32.dll\GetUserObjectInformationW", HANDLE, hObj, USER_OBJECT_INFORMATION_INDEX, nIndex, Struct.Ptr, pvInfo?, UInt32, pvInfo?.Size ?? 0, UInt32.Ptr, lpnLengthNeeded?, BOOL)
+OpenDesktop(lpszDesktop, dwFlags, fInherit, dwDesiredAccess)
+  => DllCall("USER32.dll\OpenDesktopW", "Str", lpszDesktop, DESKTOP_CONTROL_FLAGS, dwFlags, BOOL, fInherit, UInt32, dwDesiredAccess, HDESK)
+OpenInputDesktop(dwFlags, fInherit, dwDesiredAccess)
+  => DllCall("USER32.dll\OpenInputDesktop", DESKTOP_CONTROL_FLAGS, dwFlags, BOOL, fInherit, DESKTOP_ACCESS_FLAGS, dwDesiredAccess, HDESK)
+OpenWindowStation(lpszWinSta, fInherit, dwDesiredAccess)
+  => DllCall("USER32.dll\OpenWindowStationW", "Str", lpszWinSta, BOOL, fInherit, UInt32, dwDesiredAccess, HWINSTA)
+SetProcessWindowStation(hWinSta1)
+  => DllCall("USER32.dll\SetProcessWindowStation", HWINSTA, hWinSta1, BOOL)
+SetThreadDesktop(hDesktop)
+  => DllCall("USER32.dll\SetThreadDesktop", HDESK, hDesktop, BOOL)
+SetUserObjectInformation(hObj, nIndex, pvInfo)
+  => DllCall("USER32.dll\SetUserObjectInformationW", HANDLE, hObj, Int32, nIndex, Struct.Ptr, pvInfo, UInt32, pvInfo.Size, BOOL)
+SwitchDesktop(hDesktop)
+  => DllCall("USER32.dll\SwitchDesktop", HDESK, hDesktop, BOOL)

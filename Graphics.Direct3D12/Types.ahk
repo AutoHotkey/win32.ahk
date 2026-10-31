@@ -1,0 +1,6009 @@
+﻿#Requires AutoHotkey v2.1-alpha.37
+#Include "..\_header.ahk"
+#Import "..\Foundation\Types.ahk" {BOOL, HANDLE, HRESULT, HWND, LUID, PSTR, PWSTR, RECT}
+#Import "..\Graphics.Direct3D\Types.ahk" {D3D_CBUFFER_TYPE, D3D_FEATURE_LEVEL, D3D_INTERPOLATION_MODE, D3D_MIN_PRECISION, D3D_NAME, D3D_PARAMETER_FLAGS, D3D_PRIMITIVE, D3D_PRIMITIVE_TOPOLOGY, D3D_REGISTER_COMPONENT_TYPE, D3D_RESOURCE_RETURN_TYPE, D3D_SHADER_INPUT_TYPE, D3D_SHADER_VARIABLE_CLASS, D3D_SHADER_VARIABLE_TYPE, D3D_SRV_DIMENSION, D3D_TESSELLATOR_DOMAIN, D3D_TESSELLATOR_OUTPUT_PRIMITIVE, D3D_TESSELLATOR_PARTITIONING, ID3DBlob}
+#Import "..\Graphics.Dxgi.Common\Types.ahk" {DXGI_FORMAT, DXGI_SAMPLE_DESC}
+#Import "..\Security\Types.ahk" {SECURITY_ATTRIBUTES}
+#Import "..\System.Com\Types.ahk" {IUnknown}
+
+struct D3D12_COMMAND_LIST_TYPE extends Int32 {
+    static D3D12_COMMAND_LIST_TYPE_DIRECT := 0
+    static D3D12_COMMAND_LIST_TYPE_BUNDLE := 1
+    static D3D12_COMMAND_LIST_TYPE_COMPUTE := 2
+    static D3D12_COMMAND_LIST_TYPE_COPY := 3
+    static D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE := 4
+    static D3D12_COMMAND_LIST_TYPE_VIDEO_PROCESS := 5
+    static D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE := 6
+    static D3D12_COMMAND_LIST_TYPE_NONE := -1
+}
+struct D3D12_COMMAND_QUEUE_FLAGS extends Int32 {
+    static D3D12_COMMAND_QUEUE_FLAG_NONE := 0
+    static D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT := 1
+    static D3D12_COMMAND_QUEUE_FLAG_ALLOW_DYNAMIC_PRIORITY := 2
+}
+struct D3D12_COMMAND_QUEUE_PRIORITY extends Int32 {
+    static D3D12_COMMAND_QUEUE_PRIORITY_NORMAL := 0
+    static D3D12_COMMAND_QUEUE_PRIORITY_HIGH := 100
+    static D3D12_COMMAND_QUEUE_PRIORITY_GLOBAL_REALTIME := 10000
+}
+struct D3D12_COMMAND_QUEUE_DESC {
+    Type : D3D12_COMMAND_LIST_TYPE
+    Priority : Int32
+    Flags : D3D12_COMMAND_QUEUE_FLAGS
+    NodeMask : UInt32
+}
+struct D3D12_PRIMITIVE_TOPOLOGY_TYPE extends Int32 {
+    static D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED := 0
+    static D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT := 1
+    static D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE := 2
+    static D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE := 3
+    static D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH := 4
+}
+struct D3D12_INPUT_CLASSIFICATION extends Int32 {
+    static D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA := 0
+    static D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA := 1
+}
+struct D3D12_INPUT_ELEMENT_DESC {
+    SemanticName : PSTR
+    SemanticIndex : UInt32
+    Format : DXGI_FORMAT
+    InputSlot : UInt32
+    AlignedByteOffset : UInt32
+    InputSlotClass : D3D12_INPUT_CLASSIFICATION
+    InstanceDataStepRate : UInt32
+}
+struct D3D12_FILL_MODE extends Int32 {
+    static D3D12_FILL_MODE_WIREFRAME := 2
+    static D3D12_FILL_MODE_SOLID := 3
+}
+struct D3D12_CULL_MODE extends Int32 {
+    static D3D12_CULL_MODE_NONE := 1
+    static D3D12_CULL_MODE_FRONT := 2
+    static D3D12_CULL_MODE_BACK := 3
+}
+struct D3D12_SO_DECLARATION_ENTRY {
+    Stream : UInt32
+    SemanticName : PSTR
+    SemanticIndex : UInt32
+    StartComponent : UInt8
+    ComponentCount : UInt8
+    OutputSlot : UInt8
+}
+struct D3D12_VIEWPORT {
+    TopLeftX : Float32
+    TopLeftY : Float32
+    Width : Float32
+    Height : Float32
+    MinDepth : Float32
+    MaxDepth : Float32
+}
+struct D3D12_BOX {
+    left : UInt32
+    top : UInt32
+    front : UInt32
+    right : UInt32
+    bottom : UInt32
+    back : UInt32
+}
+struct D3D12_COMPARISON_FUNC extends Int32 {
+    static D3D12_COMPARISON_FUNC_NONE := 0
+    static D3D12_COMPARISON_FUNC_NEVER := 1
+    static D3D12_COMPARISON_FUNC_LESS := 2
+    static D3D12_COMPARISON_FUNC_EQUAL := 3
+    static D3D12_COMPARISON_FUNC_LESS_EQUAL := 4
+    static D3D12_COMPARISON_FUNC_GREATER := 5
+    static D3D12_COMPARISON_FUNC_NOT_EQUAL := 6
+    static D3D12_COMPARISON_FUNC_GREATER_EQUAL := 7
+    static D3D12_COMPARISON_FUNC_ALWAYS := 8
+}
+struct D3D12_DEPTH_WRITE_MASK extends Int32 {
+    static D3D12_DEPTH_WRITE_MASK_ZERO := 0
+    static D3D12_DEPTH_WRITE_MASK_ALL := 1
+}
+struct D3D12_STENCIL_OP extends Int32 {
+    static D3D12_STENCIL_OP_KEEP := 1
+    static D3D12_STENCIL_OP_ZERO := 2
+    static D3D12_STENCIL_OP_REPLACE := 3
+    static D3D12_STENCIL_OP_INCR_SAT := 4
+    static D3D12_STENCIL_OP_DECR_SAT := 5
+    static D3D12_STENCIL_OP_INVERT := 6
+    static D3D12_STENCIL_OP_INCR := 7
+    static D3D12_STENCIL_OP_DECR := 8
+}
+struct D3D12_DEPTH_STENCILOP_DESC {
+    StencilFailOp : D3D12_STENCIL_OP
+    StencilDepthFailOp : D3D12_STENCIL_OP
+    StencilPassOp : D3D12_STENCIL_OP
+    StencilFunc : D3D12_COMPARISON_FUNC
+}
+struct D3D12_DEPTH_STENCIL_DESC {
+    DepthEnable : BOOL
+    DepthWriteMask : D3D12_DEPTH_WRITE_MASK
+    DepthFunc : D3D12_COMPARISON_FUNC
+    StencilEnable : BOOL
+    StencilReadMask : UInt8
+    StencilWriteMask : UInt8
+    FrontFace : D3D12_DEPTH_STENCILOP_DESC
+    BackFace : D3D12_DEPTH_STENCILOP_DESC
+}
+struct D3D12_DEPTH_STENCIL_DESC1 {
+    DepthEnable : BOOL
+    DepthWriteMask : D3D12_DEPTH_WRITE_MASK
+    DepthFunc : D3D12_COMPARISON_FUNC
+    StencilEnable : BOOL
+    StencilReadMask : UInt8
+    StencilWriteMask : UInt8
+    FrontFace : D3D12_DEPTH_STENCILOP_DESC
+    BackFace : D3D12_DEPTH_STENCILOP_DESC
+    DepthBoundsTestEnable : BOOL
+}
+struct D3D12_DEPTH_STENCILOP_DESC1 {
+    StencilFailOp : D3D12_STENCIL_OP
+    StencilDepthFailOp : D3D12_STENCIL_OP
+    StencilPassOp : D3D12_STENCIL_OP
+    StencilFunc : D3D12_COMPARISON_FUNC
+    StencilReadMask : UInt8
+    StencilWriteMask : UInt8
+}
+struct D3D12_DEPTH_STENCIL_DESC2 {
+    DepthEnable : BOOL
+    DepthWriteMask : D3D12_DEPTH_WRITE_MASK
+    DepthFunc : D3D12_COMPARISON_FUNC
+    StencilEnable : BOOL
+    FrontFace : D3D12_DEPTH_STENCILOP_DESC1
+    BackFace : D3D12_DEPTH_STENCILOP_DESC1
+    DepthBoundsTestEnable : BOOL
+}
+struct D3D12_BLEND extends Int32 {
+    static D3D12_BLEND_ZERO := 1
+    static D3D12_BLEND_ONE := 2
+    static D3D12_BLEND_SRC_COLOR := 3
+    static D3D12_BLEND_INV_SRC_COLOR := 4
+    static D3D12_BLEND_SRC_ALPHA := 5
+    static D3D12_BLEND_INV_SRC_ALPHA := 6
+    static D3D12_BLEND_DEST_ALPHA := 7
+    static D3D12_BLEND_INV_DEST_ALPHA := 8
+    static D3D12_BLEND_DEST_COLOR := 9
+    static D3D12_BLEND_INV_DEST_COLOR := 10
+    static D3D12_BLEND_SRC_ALPHA_SAT := 11
+    static D3D12_BLEND_BLEND_FACTOR := 14
+    static D3D12_BLEND_INV_BLEND_FACTOR := 15
+    static D3D12_BLEND_SRC1_COLOR := 16
+    static D3D12_BLEND_INV_SRC1_COLOR := 17
+    static D3D12_BLEND_SRC1_ALPHA := 18
+    static D3D12_BLEND_INV_SRC1_ALPHA := 19
+    static D3D12_BLEND_ALPHA_FACTOR := 20
+    static D3D12_BLEND_INV_ALPHA_FACTOR := 21
+}
+struct D3D12_BLEND_OP extends Int32 {
+    static D3D12_BLEND_OP_ADD := 1
+    static D3D12_BLEND_OP_SUBTRACT := 2
+    static D3D12_BLEND_OP_REV_SUBTRACT := 3
+    static D3D12_BLEND_OP_MIN := 4
+    static D3D12_BLEND_OP_MAX := 5
+}
+struct D3D12_COLOR_WRITE_ENABLE extends Int32 {
+    static D3D12_COLOR_WRITE_ENABLE_RED := 1
+    static D3D12_COLOR_WRITE_ENABLE_GREEN := 2
+    static D3D12_COLOR_WRITE_ENABLE_BLUE := 4
+    static D3D12_COLOR_WRITE_ENABLE_ALPHA := 8
+    static D3D12_COLOR_WRITE_ENABLE_ALL := 15
+}
+struct D3D12_LOGIC_OP extends Int32 {
+    static D3D12_LOGIC_OP_CLEAR := 0
+    static D3D12_LOGIC_OP_SET := 1
+    static D3D12_LOGIC_OP_COPY := 2
+    static D3D12_LOGIC_OP_COPY_INVERTED := 3
+    static D3D12_LOGIC_OP_NOOP := 4
+    static D3D12_LOGIC_OP_INVERT := 5
+    static D3D12_LOGIC_OP_AND := 6
+    static D3D12_LOGIC_OP_NAND := 7
+    static D3D12_LOGIC_OP_OR := 8
+    static D3D12_LOGIC_OP_NOR := 9
+    static D3D12_LOGIC_OP_XOR := 10
+    static D3D12_LOGIC_OP_EQUIV := 11
+    static D3D12_LOGIC_OP_AND_REVERSE := 12
+    static D3D12_LOGIC_OP_AND_INVERTED := 13
+    static D3D12_LOGIC_OP_OR_REVERSE := 14
+    static D3D12_LOGIC_OP_OR_INVERTED := 15
+}
+struct D3D12_RENDER_TARGET_BLEND_DESC {
+    BlendEnable : BOOL
+    LogicOpEnable : BOOL
+    SrcBlend : D3D12_BLEND
+    DestBlend : D3D12_BLEND
+    BlendOp : D3D12_BLEND_OP
+    SrcBlendAlpha : D3D12_BLEND
+    DestBlendAlpha : D3D12_BLEND
+    BlendOpAlpha : D3D12_BLEND_OP
+    LogicOp : D3D12_LOGIC_OP
+    RenderTargetWriteMask : UInt8
+}
+struct D3D12_BLEND_DESC {
+    AlphaToCoverageEnable : BOOL
+    IndependentBlendEnable : BOOL
+    RenderTarget : D3D12_RENDER_TARGET_BLEND_DESC[8]
+}
+struct D3D12_CONSERVATIVE_RASTERIZATION_MODE extends Int32 {
+    static D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF := 0
+    static D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON := 1
+}
+struct D3D12_RASTERIZER_DESC {
+    FillMode : D3D12_FILL_MODE
+    CullMode : D3D12_CULL_MODE
+    FrontCounterClockwise : BOOL
+    DepthBias : Int32
+    DepthBiasClamp : Float32
+    SlopeScaledDepthBias : Float32
+    DepthClipEnable : BOOL
+    MultisampleEnable : BOOL
+    AntialiasedLineEnable : BOOL
+    ForcedSampleCount : UInt32
+    ConservativeRaster : D3D12_CONSERVATIVE_RASTERIZATION_MODE
+}
+struct D3D12_RASTERIZER_DESC1 {
+    FillMode : D3D12_FILL_MODE
+    CullMode : D3D12_CULL_MODE
+    FrontCounterClockwise : BOOL
+    DepthBias : Float32
+    DepthBiasClamp : Float32
+    SlopeScaledDepthBias : Float32
+    DepthClipEnable : BOOL
+    MultisampleEnable : BOOL
+    AntialiasedLineEnable : BOOL
+    ForcedSampleCount : UInt32
+    ConservativeRaster : D3D12_CONSERVATIVE_RASTERIZATION_MODE
+}
+struct D3D12_LINE_RASTERIZATION_MODE extends Int32 {
+    static D3D12_LINE_RASTERIZATION_MODE_ALIASED := 0
+    static D3D12_LINE_RASTERIZATION_MODE_ALPHA_ANTIALIASED := 1
+    static D3D12_LINE_RASTERIZATION_MODE_QUADRILATERAL_WIDE := 2
+    static D3D12_LINE_RASTERIZATION_MODE_QUADRILATERAL_NARROW := 3
+}
+struct D3D12_RASTERIZER_DESC2 {
+    FillMode : D3D12_FILL_MODE
+    CullMode : D3D12_CULL_MODE
+    FrontCounterClockwise : BOOL
+    DepthBias : Float32
+    DepthBiasClamp : Float32
+    SlopeScaledDepthBias : Float32
+    DepthClipEnable : BOOL
+    LineRasterizationMode : D3D12_LINE_RASTERIZATION_MODE
+    ForcedSampleCount : UInt32
+    ConservativeRaster : D3D12_CONSERVATIVE_RASTERIZATION_MODE
+}
+struct ID3D12Object extends IUnknown {
+    static IID := "{C4FEC28F-7966-4E95-9F94-F431CB56C3B8}"
+    GetPrivateData(guid, pDataSize, pData?)
+      => ComCall(3, this.p, GUID.Ptr, guid, UInt32.Ptr, pDataSize, Struct.Ptr, pData?)
+    SetPrivateData(guid, pData?)
+      => ComCall(4, this.p, GUID.Ptr, guid, UInt32, pData?.Size ?? 0, Struct.Ptr, pData?)
+    SetPrivateDataInterface(guid, pData?)
+      => ComCall(5, this.p, GUID.Ptr, guid, IUnknown, pData?)
+    SetName(Name)
+      => ComCall(6, this.p, "Str", Name)
+}
+struct ID3D12DeviceChild extends ID3D12Object {
+    static IID := "{905DB94B-A00C-4140-9DF5-2B64CA9EA357}"
+    GetDevice(riid, ppvDevice?)
+      => ComCall(7, this.p, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvDevice?)
+}
+struct ID3D12RootSignature extends ID3D12DeviceChild {
+    static IID := "{C54A6B66-72DF-4EE8-8BE5-A946A1429214}"
+}
+struct ID3D12RootSignature1 extends ID3D12RootSignature {
+    static IID := "{C390BD7D-9142-4A95-B072-6D3439ADE5C4}"
+    GetSerializedSize()
+      => ComCall(8, this.p, IntPtr)
+    GetSerializedData(pData)
+      => ComCall(9, this.p, Struct.Ptr, pData, IntPtr, pData.Size)
+}
+struct D3D12_SHADER_BYTECODE {
+    pShaderBytecode : Struct.Ptr
+    BytecodeLength : IntPtr
+}
+struct D3D12_STREAM_OUTPUT_DESC {
+    pSODeclaration : D3D12_SO_DECLARATION_ENTRY.Ptr
+    NumEntries : UInt32
+    pBufferStrides : UInt32.Ptr
+    NumStrides : UInt32
+    RasterizedStream : UInt32
+}
+struct D3D12_INPUT_LAYOUT_DESC {
+    pInputElementDescs : D3D12_INPUT_ELEMENT_DESC.Ptr
+    NumElements : UInt32
+}
+struct D3D12_INDEX_BUFFER_STRIP_CUT_VALUE extends Int32 {
+    static D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED := 0
+    static D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFF := 1
+    static D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF := 2
+}
+struct D3D12_STANDARD_MULTISAMPLE_QUALITY_LEVELS extends Int32 {
+    static D3D12_STANDARD_MULTISAMPLE_PATTERN := -1
+    static D3D12_CENTER_MULTISAMPLE_PATTERN := -2
+}
+struct D3D12_CACHED_PIPELINE_STATE {
+    pCachedBlob : Struct.Ptr
+    CachedBlobSizeInBytes : IntPtr
+}
+struct D3D12_PIPELINE_STATE_FLAGS extends Int32 {
+    static D3D12_PIPELINE_STATE_FLAG_NONE := 0
+    static D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG := 1
+    static D3D12_PIPELINE_STATE_FLAG_DYNAMIC_DEPTH_BIAS := 4
+    static D3D12_PIPELINE_STATE_FLAG_DYNAMIC_INDEX_BUFFER_STRIP_CUT := 8
+    static D3D12_PIPELINE_STATE_FLAG_DISABLE_CACHED_BLOB := 16
+}
+struct D3D12_GRAPHICS_PIPELINE_STATE_DESC {
+    pRootSignature : ID3D12RootSignature
+    VS : D3D12_SHADER_BYTECODE
+    PS : D3D12_SHADER_BYTECODE
+    DS : D3D12_SHADER_BYTECODE
+    HS : D3D12_SHADER_BYTECODE
+    GS : D3D12_SHADER_BYTECODE
+    StreamOutput : D3D12_STREAM_OUTPUT_DESC
+    BlendState : D3D12_BLEND_DESC
+    SampleMask : UInt32
+    RasterizerState : D3D12_RASTERIZER_DESC
+    DepthStencilState : D3D12_DEPTH_STENCIL_DESC
+    InputLayout : D3D12_INPUT_LAYOUT_DESC
+    IBStripCutValue : D3D12_INDEX_BUFFER_STRIP_CUT_VALUE
+    PrimitiveTopologyType : D3D12_PRIMITIVE_TOPOLOGY_TYPE
+    NumRenderTargets : UInt32
+    RTVFormats : DXGI_FORMAT[8]
+    DSVFormat : DXGI_FORMAT
+    SampleDesc : DXGI_SAMPLE_DESC
+    NodeMask : UInt32
+    CachedPSO : D3D12_CACHED_PIPELINE_STATE
+    Flags : D3D12_PIPELINE_STATE_FLAGS
+}
+struct D3D12_COMPUTE_PIPELINE_STATE_DESC {
+    pRootSignature : ID3D12RootSignature
+    CS : D3D12_SHADER_BYTECODE
+    NodeMask : UInt32
+    CachedPSO : D3D12_CACHED_PIPELINE_STATE
+    Flags : D3D12_PIPELINE_STATE_FLAGS
+}
+struct D3D_ROOT_SIGNATURE_VERSION extends Int32 {
+    static D3D_ROOT_SIGNATURE_VERSION_1 := 1
+    static D3D_ROOT_SIGNATURE_VERSION_1_0 := 1
+    static D3D_ROOT_SIGNATURE_VERSION_1_1 := 2
+    static D3D_ROOT_SIGNATURE_VERSION_1_2 := 3
+}
+struct D3D12_SERIALIZED_ROOT_SIGNATURE_DESC {
+    pSerializedBlob : Struct.Ptr
+    SerializedBlobSizeInBytes : IntPtr
+}
+struct D3D12_GLOBAL_SERIALIZED_ROOT_SIGNATURE {
+    Desc : D3D12_SERIALIZED_ROOT_SIGNATURE_DESC
+}
+struct D3D12_LOCAL_SERIALIZED_ROOT_SIGNATURE {
+    Desc : D3D12_SERIALIZED_ROOT_SIGNATURE_DESC
+}
+struct D3D12_RT_FORMAT_ARRAY {
+    RTFormats : DXGI_FORMAT[8]
+    NumRenderTargets : UInt32
+}
+struct D3D12_PIPELINE_STATE_STREAM_DESC {
+    SizeInBytes : IntPtr
+    pPipelineStateSubobjectStream : Struct.Ptr
+}
+struct D3D12_PIPELINE_STATE_SUBOBJECT_TYPE extends Int32 {
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE := 0
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS := 1
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS := 2
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DS := 3
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_HS := 4
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_GS := 5
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CS := 6
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_STREAM_OUTPUT := 7
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND := 8
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK := 9
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER := 10
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL := 11
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT := 12
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_IB_STRIP_CUT_VALUE := 13
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY := 14
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS := 15
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT := 16
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC := 17
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_NODE_MASK := 18
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO := 19
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS := 20
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1 := 21
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VIEW_INSTANCING := 22
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS := 24
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS := 25
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2 := 26
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER1 := 27
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER2 := 28
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SERIALIZED_ROOT_SIGNATURE := 29
+    static D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MAX_VALID := 30
+}
+struct D3D12_FEATURE extends Int32 {
+    static D3D12_FEATURE_D3D12_OPTIONS := 0
+    static D3D12_FEATURE_ARCHITECTURE := 1
+    static D3D12_FEATURE_FEATURE_LEVELS := 2
+    static D3D12_FEATURE_FORMAT_SUPPORT := 3
+    static D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS := 4
+    static D3D12_FEATURE_FORMAT_INFO := 5
+    static D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT := 6
+    static D3D12_FEATURE_SHADER_MODEL := 7
+    static D3D12_FEATURE_D3D12_OPTIONS1 := 8
+    static D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_SUPPORT := 10
+    static D3D12_FEATURE_ROOT_SIGNATURE := 12
+    static D3D12_FEATURE_ARCHITECTURE1 := 16
+    static D3D12_FEATURE_D3D12_OPTIONS2 := 18
+    static D3D12_FEATURE_SHADER_CACHE := 19
+    static D3D12_FEATURE_COMMAND_QUEUE_PRIORITY := 20
+    static D3D12_FEATURE_D3D12_OPTIONS3 := 21
+    static D3D12_FEATURE_EXISTING_HEAPS := 22
+    static D3D12_FEATURE_D3D12_OPTIONS4 := 23
+    static D3D12_FEATURE_SERIALIZATION := 24
+    static D3D12_FEATURE_CROSS_NODE := 25
+    static D3D12_FEATURE_D3D12_OPTIONS5 := 27
+    static D3D12_FEATURE_DISPLAYABLE := 28
+    static D3D12_FEATURE_D3D12_OPTIONS6 := 30
+    static D3D12_FEATURE_QUERY_META_COMMAND := 31
+    static D3D12_FEATURE_D3D12_OPTIONS7 := 32
+    static D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_TYPE_COUNT := 33
+    static D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_TYPES := 34
+    static D3D12_FEATURE_D3D12_OPTIONS8 := 36
+    static D3D12_FEATURE_D3D12_OPTIONS9 := 37
+    static D3D12_FEATURE_D3D12_OPTIONS10 := 39
+    static D3D12_FEATURE_D3D12_OPTIONS11 := 40
+    static D3D12_FEATURE_D3D12_OPTIONS12 := 41
+    static D3D12_FEATURE_D3D12_OPTIONS13 := 42
+    static D3D12_FEATURE_D3D12_OPTIONS14 := 43
+    static D3D12_FEATURE_D3D12_OPTIONS15 := 44
+    static D3D12_FEATURE_D3D12_OPTIONS16 := 45
+    static D3D12_FEATURE_D3D12_OPTIONS17 := 46
+    static D3D12_FEATURE_D3D12_OPTIONS18 := 47
+    static D3D12_FEATURE_D3D12_OPTIONS19 := 48
+    static D3D12_FEATURE_D3D12_OPTIONS20 := 49
+    static D3D12_FEATURE_PREDICATION := 50
+    static D3D12_FEATURE_PLACED_RESOURCE_SUPPORT_INFO := 51
+    static D3D12_FEATURE_HARDWARE_COPY := 52
+    static D3D12_FEATURE_D3D12_OPTIONS21 := 53
+    static D3D12_FEATURE_D3D12_TIGHT_ALIGNMENT := 54
+    static D3D12_FEATURE_APPLICATION_SPECIFIC_DRIVER_STATE := 56
+    static D3D12_FEATURE_BYTECODE_BYPASS_HASH_SUPPORTED := 57
+    static D3D12_FEATURE_SHADER_CACHE_ABI_SUPPORT := 61
+    static D3D12_FEATURE_BARRIER_LAYOUT := 64
+    static D3D12_FEATURE_D3D12_OPTIONS22 := 65
+}
+struct D3D12_SHADER_MIN_PRECISION_SUPPORT extends Int32 {
+    static D3D12_SHADER_MIN_PRECISION_SUPPORT_NONE := 0
+    static D3D12_SHADER_MIN_PRECISION_SUPPORT_10_BIT := 1
+    static D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT := 2
+}
+struct D3D12_TILED_RESOURCES_TIER extends Int32 {
+    static D3D12_TILED_RESOURCES_TIER_NOT_SUPPORTED := 0
+    static D3D12_TILED_RESOURCES_TIER_1 := 1
+    static D3D12_TILED_RESOURCES_TIER_2 := 2
+    static D3D12_TILED_RESOURCES_TIER_3 := 3
+    static D3D12_TILED_RESOURCES_TIER_4 := 4
+}
+struct D3D12_RESOURCE_BINDING_TIER extends Int32 {
+    static D3D12_RESOURCE_BINDING_TIER_1 := 1
+    static D3D12_RESOURCE_BINDING_TIER_2 := 2
+    static D3D12_RESOURCE_BINDING_TIER_3 := 3
+}
+struct D3D12_CONSERVATIVE_RASTERIZATION_TIER extends Int32 {
+    static D3D12_CONSERVATIVE_RASTERIZATION_TIER_NOT_SUPPORTED := 0
+    static D3D12_CONSERVATIVE_RASTERIZATION_TIER_1 := 1
+    static D3D12_CONSERVATIVE_RASTERIZATION_TIER_2 := 2
+    static D3D12_CONSERVATIVE_RASTERIZATION_TIER_3 := 3
+}
+struct D3D12_FORMAT_SUPPORT1 extends Int32 {
+    static D3D12_FORMAT_SUPPORT1_NONE := 0
+    static D3D12_FORMAT_SUPPORT1_BUFFER := 1
+    static D3D12_FORMAT_SUPPORT1_IA_VERTEX_BUFFER := 2
+    static D3D12_FORMAT_SUPPORT1_IA_INDEX_BUFFER := 4
+    static D3D12_FORMAT_SUPPORT1_SO_BUFFER := 8
+    static D3D12_FORMAT_SUPPORT1_TEXTURE1D := 16
+    static D3D12_FORMAT_SUPPORT1_TEXTURE2D := 32
+    static D3D12_FORMAT_SUPPORT1_TEXTURE3D := 64
+    static D3D12_FORMAT_SUPPORT1_TEXTURECUBE := 128
+    static D3D12_FORMAT_SUPPORT1_SHADER_LOAD := 256
+    static D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE := 512
+    static D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE_COMPARISON := 1024
+    static D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE_MONO_TEXT := 2048
+    static D3D12_FORMAT_SUPPORT1_MIP := 4096
+    static D3D12_FORMAT_SUPPORT1_RENDER_TARGET := 16384
+    static D3D12_FORMAT_SUPPORT1_BLENDABLE := 32768
+    static D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL := 65536
+    static D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RESOLVE := 262144
+    static D3D12_FORMAT_SUPPORT1_DISPLAY := 524288
+    static D3D12_FORMAT_SUPPORT1_CAST_WITHIN_BIT_LAYOUT := 1048576
+    static D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET := 2097152
+    static D3D12_FORMAT_SUPPORT1_MULTISAMPLE_LOAD := 4194304
+    static D3D12_FORMAT_SUPPORT1_SHADER_GATHER := 8388608
+    static D3D12_FORMAT_SUPPORT1_BACK_BUFFER_CAST := 16777216
+    static D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW := 33554432
+    static D3D12_FORMAT_SUPPORT1_SHADER_GATHER_COMPARISON := 67108864
+    static D3D12_FORMAT_SUPPORT1_DECODER_OUTPUT := 134217728
+    static D3D12_FORMAT_SUPPORT1_VIDEO_PROCESSOR_OUTPUT := 268435456
+    static D3D12_FORMAT_SUPPORT1_VIDEO_PROCESSOR_INPUT := 536870912
+    static D3D12_FORMAT_SUPPORT1_VIDEO_ENCODER := 1073741824
+}
+struct D3D12_FORMAT_SUPPORT2 extends Int32 {
+    static D3D12_FORMAT_SUPPORT2_NONE := 0
+    static D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_ADD := 1
+    static D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_BITWISE_OPS := 2
+    static D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_COMPARE_STORE_OR_COMPARE_EXCHANGE := 4
+    static D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_EXCHANGE := 8
+    static D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_SIGNED_MIN_OR_MAX := 16
+    static D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_UNSIGNED_MIN_OR_MAX := 32
+    static D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD := 64
+    static D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE := 128
+    static D3D12_FORMAT_SUPPORT2_OUTPUT_MERGER_LOGIC_OP := 256
+    static D3D12_FORMAT_SUPPORT2_TILED := 512
+    static D3D12_FORMAT_SUPPORT2_MULTIPLANE_OVERLAY := 16384
+    static D3D12_FORMAT_SUPPORT2_SAMPLER_FEEDBACK := 32768
+    static D3D12_FORMAT_SUPPORT2_DISPLAYABLE := 65536
+}
+struct D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS extends Int32 {
+    static D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE := 0
+    static D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_TILED_RESOURCE := 1
+}
+struct D3D12_CROSS_NODE_SHARING_TIER extends Int32 {
+    static D3D12_CROSS_NODE_SHARING_TIER_NOT_SUPPORTED := 0
+    static D3D12_CROSS_NODE_SHARING_TIER_1_EMULATED := 1
+    static D3D12_CROSS_NODE_SHARING_TIER_1 := 2
+    static D3D12_CROSS_NODE_SHARING_TIER_2 := 3
+    static D3D12_CROSS_NODE_SHARING_TIER_3 := 4
+}
+struct D3D12_RESOURCE_HEAP_TIER extends Int32 {
+    static D3D12_RESOURCE_HEAP_TIER_1 := 1
+    static D3D12_RESOURCE_HEAP_TIER_2 := 2
+}
+struct D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER extends Int32 {
+    static D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_NOT_SUPPORTED := 0
+    static D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_1 := 1
+    static D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_2 := 2
+}
+struct D3D12_VIEW_INSTANCING_TIER extends Int32 {
+    static D3D12_VIEW_INSTANCING_TIER_NOT_SUPPORTED := 0
+    static D3D12_VIEW_INSTANCING_TIER_1 := 1
+    static D3D12_VIEW_INSTANCING_TIER_2 := 2
+    static D3D12_VIEW_INSTANCING_TIER_3 := 3
+}
+struct D3D12_WORK_GRAPHS_TIER extends Int32 {
+    static D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED := 0
+    static D3D12_WORK_GRAPHS_TIER_1_0 := 10
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS {
+    DoublePrecisionFloatShaderOps : BOOL
+    OutputMergerLogicOp : BOOL
+    MinPrecisionSupport : D3D12_SHADER_MIN_PRECISION_SUPPORT
+    TiledResourcesTier : D3D12_TILED_RESOURCES_TIER
+    ResourceBindingTier : D3D12_RESOURCE_BINDING_TIER
+    PSSpecifiedStencilRefSupported : BOOL
+    TypedUAVLoadAdditionalFormats : BOOL
+    ROVsSupported : BOOL
+    ConservativeRasterizationTier : D3D12_CONSERVATIVE_RASTERIZATION_TIER
+    MaxGPUVirtualAddressBitsPerResource : UInt32
+    StandardSwizzle64KBSupported : BOOL
+    CrossNodeSharingTier : D3D12_CROSS_NODE_SHARING_TIER
+    CrossAdapterRowMajorTextureSupported : BOOL
+    VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation : BOOL
+    ResourceHeapTier : D3D12_RESOURCE_HEAP_TIER
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS1 {
+    WaveOps : BOOL
+    WaveLaneCountMin : UInt32
+    WaveLaneCountMax : UInt32
+    TotalLaneCount : UInt32
+    ExpandedComputeResourceStates : BOOL
+    Int64ShaderOps : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS2 {
+    DepthBoundsTestSupported : BOOL
+    ProgrammableSamplePositionsTier : D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER
+}
+struct D3D12_FEATURE_DATA_ROOT_SIGNATURE {
+    HighestVersion : D3D_ROOT_SIGNATURE_VERSION
+}
+struct D3D12_FEATURE_DATA_ARCHITECTURE {
+    NodeIndex : UInt32
+    TileBasedRenderer : BOOL
+    UMA : BOOL
+    CacheCoherentUMA : BOOL
+}
+struct D3D12_FEATURE_DATA_ARCHITECTURE1 {
+    NodeIndex : UInt32
+    TileBasedRenderer : BOOL
+    UMA : BOOL
+    CacheCoherentUMA : BOOL
+    IsolatedMMU : BOOL
+}
+struct D3D12_FEATURE_DATA_FEATURE_LEVELS {
+    NumFeatureLevels : UInt32
+    pFeatureLevelsRequested : D3D_FEATURE_LEVEL.Ptr
+    MaxSupportedFeatureLevel : D3D_FEATURE_LEVEL
+}
+struct D3D_SHADER_MODEL extends Int32 {
+    static D3D_SHADER_MODEL_NONE := 0
+    static D3D_SHADER_MODEL_5_1 := 81
+    static D3D_SHADER_MODEL_6_0 := 96
+    static D3D_SHADER_MODEL_6_1 := 97
+    static D3D_SHADER_MODEL_6_2 := 98
+    static D3D_SHADER_MODEL_6_3 := 99
+    static D3D_SHADER_MODEL_6_4 := 100
+    static D3D_SHADER_MODEL_6_5 := 101
+    static D3D_SHADER_MODEL_6_6 := 102
+    static D3D_SHADER_MODEL_6_7 := 103
+    static D3D_SHADER_MODEL_6_8 := 104
+    static D3D_SHADER_MODEL_6_9 := 105
+    static D3D_SHADER_MODEL_6_10 := 106
+    static D3D_HIGHEST_SHADER_MODEL := 106
+}
+struct D3D12_FEATURE_DATA_SHADER_MODEL {
+    HighestShaderModel : D3D_SHADER_MODEL
+}
+struct D3D12_FEATURE_DATA_FORMAT_SUPPORT {
+    Format : DXGI_FORMAT
+    Support1 : D3D12_FORMAT_SUPPORT1
+    Support2 : D3D12_FORMAT_SUPPORT2
+}
+struct D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS {
+    Format : DXGI_FORMAT
+    SampleCount : UInt32
+    Flags : D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS
+    NumQualityLevels : UInt32
+}
+struct D3D12_FEATURE_DATA_FORMAT_INFO {
+    Format : DXGI_FORMAT
+    PlaneCount : UInt8
+}
+struct D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT {
+    MaxGPUVirtualAddressBitsPerResource : UInt32
+    MaxGPUVirtualAddressBitsPerProcess : UInt32
+}
+struct D3D12_SHADER_CACHE_SUPPORT_FLAGS extends Int32 {
+    static D3D12_SHADER_CACHE_SUPPORT_NONE := 0
+    static D3D12_SHADER_CACHE_SUPPORT_SINGLE_PSO := 1
+    static D3D12_SHADER_CACHE_SUPPORT_LIBRARY := 2
+    static D3D12_SHADER_CACHE_SUPPORT_AUTOMATIC_INPROC_CACHE := 4
+    static D3D12_SHADER_CACHE_SUPPORT_AUTOMATIC_DISK_CACHE := 8
+    static D3D12_SHADER_CACHE_SUPPORT_DRIVER_MANAGED_CACHE := 16
+    static D3D12_SHADER_CACHE_SUPPORT_SHADER_CONTROL_CLEAR := 32
+    static D3D12_SHADER_CACHE_SUPPORT_SHADER_SESSION_DELETE := 64
+}
+struct D3D12_FEATURE_DATA_SHADER_CACHE {
+    SupportFlags : D3D12_SHADER_CACHE_SUPPORT_FLAGS
+}
+struct D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY {
+    CommandListType : D3D12_COMMAND_LIST_TYPE
+    Priority : UInt32
+    PriorityForTypeIsSupported : BOOL
+}
+struct D3D12_COMMAND_LIST_SUPPORT_FLAGS extends Int32 {
+    static D3D12_COMMAND_LIST_SUPPORT_FLAG_NONE := 0
+    static D3D12_COMMAND_LIST_SUPPORT_FLAG_DIRECT := 1
+    static D3D12_COMMAND_LIST_SUPPORT_FLAG_BUNDLE := 2
+    static D3D12_COMMAND_LIST_SUPPORT_FLAG_COMPUTE := 4
+    static D3D12_COMMAND_LIST_SUPPORT_FLAG_COPY := 8
+    static D3D12_COMMAND_LIST_SUPPORT_FLAG_VIDEO_DECODE := 16
+    static D3D12_COMMAND_LIST_SUPPORT_FLAG_VIDEO_PROCESS := 32
+    static D3D12_COMMAND_LIST_SUPPORT_FLAG_VIDEO_ENCODE := 64
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS3 {
+    CopyQueueTimestampQueriesSupported : BOOL
+    CastingFullyTypedFormatSupported : BOOL
+    WriteBufferImmediateSupportFlags : D3D12_COMMAND_LIST_SUPPORT_FLAGS
+    ViewInstancingTier : D3D12_VIEW_INSTANCING_TIER
+    BarycentricsSupported : BOOL
+}
+struct D3D12_FEATURE_DATA_EXISTING_HEAPS {
+    Supported : BOOL
+}
+struct D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER extends Int32 {
+    static D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_0 := 0
+    static D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_1 := 1
+    static D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_2 := 2
+}
+struct D3D12_FEATURE_DATA_DISPLAYABLE {
+    DisplayableTexture : BOOL
+    SharedResourceCompatibilityTier : D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS4 {
+    MSAA64KBAlignedTextureSupported : BOOL
+    SharedResourceCompatibilityTier : D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER
+    Native16BitShaderOpsSupported : BOOL
+}
+struct D3D12_HEAP_SERIALIZATION_TIER extends Int32 {
+    static D3D12_HEAP_SERIALIZATION_TIER_0 := 0
+    static D3D12_HEAP_SERIALIZATION_TIER_10 := 10
+}
+struct D3D12_FEATURE_DATA_SERIALIZATION {
+    NodeIndex : UInt32
+    HeapSerializationTier : D3D12_HEAP_SERIALIZATION_TIER
+}
+struct D3D12_FEATURE_DATA_CROSS_NODE {
+    SharingTier : D3D12_CROSS_NODE_SHARING_TIER
+    AtomicShaderInstructions : BOOL
+}
+struct D3D12_RENDER_PASS_TIER extends Int32 {
+    static D3D12_RENDER_PASS_TIER_0 := 0
+    static D3D12_RENDER_PASS_TIER_1 := 1
+    static D3D12_RENDER_PASS_TIER_2 := 2
+}
+struct D3D12_RAYTRACING_TIER extends Int32 {
+    static D3D12_RAYTRACING_TIER_NOT_SUPPORTED := 0
+    static D3D12_RAYTRACING_TIER_1_0 := 10
+    static D3D12_RAYTRACING_TIER_1_1 := 11
+    static D3D12_RAYTRACING_TIER_1_2 := 12
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS5 {
+    SRVOnlyTiledResourceTier3 : BOOL
+    RenderPassesTier : D3D12_RENDER_PASS_TIER
+    RaytracingTier : D3D12_RAYTRACING_TIER
+}
+struct D3D12_VARIABLE_SHADING_RATE_TIER extends Int32 {
+    static D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED := 0
+    static D3D12_VARIABLE_SHADING_RATE_TIER_1 := 1
+    static D3D12_VARIABLE_SHADING_RATE_TIER_2 := 2
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS6 {
+    AdditionalShadingRatesSupported : BOOL
+    PerPrimitiveShadingRateSupportedWithViewportIndexing : BOOL
+    VariableShadingRateTier : D3D12_VARIABLE_SHADING_RATE_TIER
+    ShadingRateImageTileSize : UInt32
+    BackgroundProcessingSupported : BOOL
+}
+struct D3D12_MESH_SHADER_TIER extends Int32 {
+    static D3D12_MESH_SHADER_TIER_NOT_SUPPORTED := 0
+    static D3D12_MESH_SHADER_TIER_1 := 10
+}
+struct D3D12_SAMPLER_FEEDBACK_TIER extends Int32 {
+    static D3D12_SAMPLER_FEEDBACK_TIER_NOT_SUPPORTED := 0
+    static D3D12_SAMPLER_FEEDBACK_TIER_0_9 := 90
+    static D3D12_SAMPLER_FEEDBACK_TIER_1_0 := 100
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS7 {
+    MeshShaderTier : D3D12_MESH_SHADER_TIER
+    SamplerFeedbackTier : D3D12_SAMPLER_FEEDBACK_TIER
+}
+struct D3D12_FEATURE_DATA_QUERY_META_COMMAND {
+    CommandId : GUID
+    NodeMask : UInt32
+    pQueryInputData : Struct.Ptr
+    QueryInputDataSizeInBytes : IntPtr
+    pQueryOutputData : Struct.Ptr
+    QueryOutputDataSizeInBytes : IntPtr
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS8 {
+    UnalignedBlockTexturesSupported : BOOL
+}
+struct D3D12_WAVE_MMA_TIER extends Int32 {
+    static D3D12_WAVE_MMA_TIER_NOT_SUPPORTED := 0
+    static D3D12_WAVE_MMA_TIER_1_0 := 10
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS9 {
+    MeshShaderPipelineStatsSupported : BOOL
+    MeshShaderSupportsFullRangeRenderTargetArrayIndex : BOOL
+    AtomicInt64OnTypedResourceSupported : BOOL
+    AtomicInt64OnGroupSharedSupported : BOOL
+    DerivativesInMeshAndAmplificationShadersSupported : BOOL
+    WaveMMATier : D3D12_WAVE_MMA_TIER
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS10 {
+    VariableRateShadingSumCombinerSupported : BOOL
+    MeshShaderPerPrimitiveShadingRateSupported : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS11 {
+    AtomicInt64OnDescriptorHeapResourceSupported : BOOL
+}
+struct D3D12_TRI_STATE extends Int32 {
+    static D3D12_TRI_STATE_UNKNOWN := -1
+    static D3D12_TRI_STATE_FALSE := 0
+    static D3D12_TRI_STATE_TRUE := 1
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS12 {
+    MSPrimitivesPipelineStatisticIncludesCulledPrimitives : D3D12_TRI_STATE
+    EnhancedBarriersSupported : BOOL
+    RelaxedFormatCastingSupported : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS13 {
+    UnrestrictedBufferTextureCopyPitchSupported : BOOL
+    UnrestrictedVertexElementAlignmentSupported : BOOL
+    InvertedViewportHeightFlipsYSupported : BOOL
+    InvertedViewportDepthFlipsZSupported : BOOL
+    TextureCopyBetweenDimensionsSupported : BOOL
+    AlphaBlendFactorSupported : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS14 {
+    AdvancedTextureOpsSupported : BOOL
+    WriteableMSAATexturesSupported : BOOL
+    IndependentFrontAndBackStencilRefMaskSupported : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS15 {
+    TriangleFanSupported : BOOL
+    DynamicIndexBufferStripCutSupported : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS16 {
+    DynamicDepthBiasSupported : BOOL
+    GPUUploadHeapSupported : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS17 {
+    NonNormalizedCoordinateSamplersSupported : BOOL
+    ManualWriteTrackingResourceSupported : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS18 {
+    RenderPassesValid : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS19 {
+    MismatchingOutputDimensionsSupported : BOOL
+    SupportedSampleCountsWithNoOutputs : UInt32
+    PointSamplingAddressesNeverRoundUp : BOOL
+    RasterizerDesc2Supported : BOOL
+    NarrowQuadrilateralLinesSupported : BOOL
+    AnisoFilterWithPointMipSupported : BOOL
+    MaxSamplerDescriptorHeapSize : UInt32
+    MaxSamplerDescriptorHeapSizeWithStaticSamplers : UInt32
+    MaxViewDescriptorHeapSize : UInt32
+    ComputeOnlyCustomHeapSupported : BOOL
+}
+struct D3D12_RECREATE_AT_TIER extends Int32 {
+    static D3D12_RECREATE_AT_TIER_NOT_SUPPORTED := 0
+    static D3D12_RECREATE_AT_TIER_1 := 1
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS20 {
+    ComputeOnlyWriteWatchSupported : BOOL
+    RecreateAtTier : D3D12_RECREATE_AT_TIER
+}
+struct D3D12_EXECUTE_INDIRECT_TIER extends Int32 {
+    static D3D12_EXECUTE_INDIRECT_TIER_1_0 := 10
+    static D3D12_EXECUTE_INDIRECT_TIER_1_1 := 11
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS21 {
+    WorkGraphsTier : D3D12_WORK_GRAPHS_TIER
+    ExecuteIndirectTier : D3D12_EXECUTE_INDIRECT_TIER
+    SampleCmpGradientAndBiasSupported : BOOL
+    ExtendedCommandInfoSupported : BOOL
+}
+struct D3D12_FEATURE_DATA_D3D12_OPTIONS22 {
+    ShaderExecutionReorderingActuallyReorders : BOOL
+    CreateByteOffsetViewsSupported : BOOL
+    Max1DDispatchSize : UInt32
+    Max1DDispatchMeshSize : UInt32
+}
+struct D3D12_TIGHT_ALIGNMENT_TIER extends Int32 {
+    static D3D12_TIGHT_ALIGNMENT_TIER_NOT_SUPPORTED := 0
+    static D3D12_TIGHT_ALIGNMENT_TIER_1 := 1
+}
+struct D3D12_FEATURE_DATA_TIGHT_ALIGNMENT {
+    SupportTier : D3D12_TIGHT_ALIGNMENT_TIER
+}
+struct D3D12_FEATURE_DATA_PREDICATION {
+    Supported : BOOL
+}
+struct D3D12_FEATURE_DATA_HARDWARE_COPY {
+    Supported : BOOL
+}
+struct D3D12_FEATURE_DATA_APPLICATION_SPECIFIC_DRIVER_STATE {
+    Supported : BOOL
+}
+struct D3D12_FEATURE_DATA_BYTECODE_BYPASS_HASH_SUPPORTED {
+    Supported : BOOL
+}
+struct D3D12_RESOURCE_ALLOCATION_INFO {
+    SizeInBytes : Int64
+    Alignment : Int64
+}
+struct D3D12_RESOURCE_ALLOCATION_INFO1 {
+    Offset : Int64
+    Alignment : Int64
+    SizeInBytes : Int64
+}
+struct D3D12_HEAP_TYPE extends Int32 {
+    static D3D12_HEAP_TYPE_DEFAULT := 1
+    static D3D12_HEAP_TYPE_UPLOAD := 2
+    static D3D12_HEAP_TYPE_READBACK := 3
+    static D3D12_HEAP_TYPE_CUSTOM := 4
+    static D3D12_HEAP_TYPE_GPU_UPLOAD := 5
+}
+struct D3D12_CPU_PAGE_PROPERTY extends Int32 {
+    static D3D12_CPU_PAGE_PROPERTY_UNKNOWN := 0
+    static D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE := 1
+    static D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE := 2
+    static D3D12_CPU_PAGE_PROPERTY_WRITE_BACK := 3
+}
+struct D3D12_MEMORY_POOL extends Int32 {
+    static D3D12_MEMORY_POOL_UNKNOWN := 0
+    static D3D12_MEMORY_POOL_L0 := 1
+    static D3D12_MEMORY_POOL_L1 := 2
+}
+struct D3D12_HEAP_PROPERTIES {
+    Type : D3D12_HEAP_TYPE
+    CPUPageProperty : D3D12_CPU_PAGE_PROPERTY
+    MemoryPoolPreference : D3D12_MEMORY_POOL
+    CreationNodeMask : UInt32
+    VisibleNodeMask : UInt32
+}
+struct D3D12_HEAP_FLAGS extends Int32 {
+    static D3D12_HEAP_FLAG_NONE := 0
+    static D3D12_HEAP_FLAG_SHARED := 1
+    static D3D12_HEAP_FLAG_DENY_BUFFERS := 4
+    static D3D12_HEAP_FLAG_ALLOW_DISPLAY := 8
+    static D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER := 32
+    static D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES := 64
+    static D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES := 128
+    static D3D12_HEAP_FLAG_HARDWARE_PROTECTED := 256
+    static D3D12_HEAP_FLAG_ALLOW_WRITE_WATCH := 512
+    static D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS := 1024
+    static D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT := 2048
+    static D3D12_HEAP_FLAG_CREATE_NOT_ZEROED := 4096
+    static D3D12_HEAP_FLAG_TOOLS_USE_MANUAL_WRITE_TRACKING := 8192
+    static D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES := 0
+    static D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS := 192
+    static D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES := 68
+    static D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES := 132
+}
+struct D3D12_HEAP_DESC {
+    SizeInBytes : Int64
+    Properties : D3D12_HEAP_PROPERTIES
+    Alignment : Int64
+    Flags : D3D12_HEAP_FLAGS
+}
+struct D3D12_RESOURCE_DIMENSION extends Int32 {
+    static D3D12_RESOURCE_DIMENSION_UNKNOWN := 0
+    static D3D12_RESOURCE_DIMENSION_BUFFER := 1
+    static D3D12_RESOURCE_DIMENSION_TEXTURE1D := 2
+    static D3D12_RESOURCE_DIMENSION_TEXTURE2D := 3
+    static D3D12_RESOURCE_DIMENSION_TEXTURE3D := 4
+}
+struct D3D12_FEATURE_DATA_PLACED_RESOURCE_SUPPORT_INFO {
+    Format : DXGI_FORMAT
+    Dimension : D3D12_RESOURCE_DIMENSION
+    DestHeapProperties : D3D12_HEAP_PROPERTIES
+    Supported : BOOL
+}
+struct D3D12_TEXTURE_LAYOUT extends Int32 {
+    static D3D12_TEXTURE_LAYOUT_UNKNOWN := 0
+    static D3D12_TEXTURE_LAYOUT_ROW_MAJOR := 1
+    static D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE := 2
+    static D3D12_TEXTURE_LAYOUT_64KB_STANDARD_SWIZZLE := 3
+}
+struct D3D12_RESOURCE_FLAGS extends Int32 {
+    static D3D12_RESOURCE_FLAG_NONE := 0
+    static D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET := 1
+    static D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL := 2
+    static D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS := 4
+    static D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE := 8
+    static D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER := 16
+    static D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS := 32
+    static D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY := 64
+    static D3D12_RESOURCE_FLAG_VIDEO_ENCODE_REFERENCE_ONLY := 128
+    static D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE := 256
+    static D3D12_RESOURCE_FLAG_USE_TIGHT_ALIGNMENT := 1024
+}
+struct D3D12_MIP_REGION {
+    Width : UInt32
+    Height : UInt32
+    Depth : UInt32
+}
+struct D3D12_RESOURCE_DESC {
+    Dimension : D3D12_RESOURCE_DIMENSION
+    Alignment : Int64
+    Width : Int64
+    Height : UInt32
+    DepthOrArraySize : UInt16
+    MipLevels : UInt16
+    Format : DXGI_FORMAT
+    SampleDesc : DXGI_SAMPLE_DESC
+    Layout : D3D12_TEXTURE_LAYOUT
+    Flags : D3D12_RESOURCE_FLAGS
+}
+struct D3D12_RESOURCE_DESC1 {
+    Dimension : D3D12_RESOURCE_DIMENSION
+    Alignment : Int64
+    Width : Int64
+    Height : UInt32
+    DepthOrArraySize : UInt16
+    MipLevels : UInt16
+    Format : DXGI_FORMAT
+    SampleDesc : DXGI_SAMPLE_DESC
+    Layout : D3D12_TEXTURE_LAYOUT
+    Flags : D3D12_RESOURCE_FLAGS
+    SamplerFeedbackMipRegion : D3D12_MIP_REGION
+}
+struct D3D12_DEPTH_STENCIL_VALUE {
+    Depth : Float32
+    Stencil : UInt8
+}
+struct D3D12_CLEAR_VALUE {
+    Format : DXGI_FORMAT
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Color : Float32[4]
+            DepthStencil : D3D12_DEPTH_STENCIL_VALUE
+        }
+    }
+}
+struct D3D12_RANGE {
+    Begin : IntPtr
+    End : IntPtr
+}
+struct D3D12_RANGE_UINT64 {
+    Begin : Int64
+    End : Int64
+}
+struct D3D12_SUBRESOURCE_RANGE_UINT64 {
+    Subresource : UInt32
+    Range : D3D12_RANGE_UINT64
+}
+struct D3D12_SUBRESOURCE_INFO {
+    Offset : Int64
+    RowPitch : UInt32
+    DepthPitch : UInt32
+}
+struct D3D12_TILED_RESOURCE_COORDINATE {
+    X : UInt32
+    Y : UInt32
+    Z : UInt32
+    Subresource : UInt32
+}
+struct D3D12_TILE_REGION_SIZE {
+    NumTiles : UInt32
+    UseBox : BOOL
+    Width : UInt32
+    Height : UInt16
+    Depth : UInt16
+}
+struct D3D12_TILE_RANGE_FLAGS extends Int32 {
+    static D3D12_TILE_RANGE_FLAG_NONE := 0
+    static D3D12_TILE_RANGE_FLAG_NULL := 1
+    static D3D12_TILE_RANGE_FLAG_SKIP := 2
+    static D3D12_TILE_RANGE_FLAG_REUSE_SINGLE_TILE := 4
+}
+struct D3D12_SUBRESOURCE_TILING {
+    WidthInTiles : UInt32
+    HeightInTiles : UInt16
+    DepthInTiles : UInt16
+    StartTileIndexInOverallResource : UInt32
+}
+struct D3D12_TILE_SHAPE {
+    WidthInTexels : UInt32
+    HeightInTexels : UInt32
+    DepthInTexels : UInt32
+}
+struct D3D12_PACKED_MIP_INFO {
+    NumStandardMips : UInt8
+    NumPackedMips : UInt8
+    NumTilesForPackedMips : UInt32
+    StartTileIndexInOverallResource : UInt32
+}
+struct D3D12_TILE_MAPPING_FLAGS extends Int32 {
+    static D3D12_TILE_MAPPING_FLAG_NONE := 0
+    static D3D12_TILE_MAPPING_FLAG_NO_HAZARD := 1
+}
+struct D3D12_TILE_COPY_FLAGS extends Int32 {
+    static D3D12_TILE_COPY_FLAG_NONE := 0
+    static D3D12_TILE_COPY_FLAG_NO_HAZARD := 1
+    static D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE := 2
+    static D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER := 4
+}
+struct D3D12_RESOURCE_STATES extends Int32 {
+    static D3D12_RESOURCE_STATE_COMMON := 0
+    static D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER := 1
+    static D3D12_RESOURCE_STATE_INDEX_BUFFER := 2
+    static D3D12_RESOURCE_STATE_RENDER_TARGET := 4
+    static D3D12_RESOURCE_STATE_UNORDERED_ACCESS := 8
+    static D3D12_RESOURCE_STATE_DEPTH_WRITE := 16
+    static D3D12_RESOURCE_STATE_DEPTH_READ := 32
+    static D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE := 64
+    static D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE := 128
+    static D3D12_RESOURCE_STATE_STREAM_OUT := 256
+    static D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT := 512
+    static D3D12_RESOURCE_STATE_COPY_DEST := 1024
+    static D3D12_RESOURCE_STATE_COPY_SOURCE := 2048
+    static D3D12_RESOURCE_STATE_RESOLVE_DEST := 4096
+    static D3D12_RESOURCE_STATE_RESOLVE_SOURCE := 8192
+    static D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE := 4194304
+    static D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE := 16777216
+    static D3D12_RESOURCE_STATE_RESERVED_INTERNAL_8000 := 32768
+    static D3D12_RESOURCE_STATE_RESERVED_INTERNAL_4000 := 16384
+    static D3D12_RESOURCE_STATE_RESERVED_INTERNAL_100000 := 1048576
+    static D3D12_RESOURCE_STATE_RESERVED_INTERNAL_40000000 := 1073741824
+    static D3D12_RESOURCE_STATE_RESERVED_INTERNAL_80000000 := -2147483648
+    static D3D12_RESOURCE_STATE_GENERIC_READ := 2755
+    static D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE := 192
+    static D3D12_RESOURCE_STATE_PRESENT := 0
+    static D3D12_RESOURCE_STATE_PREDICATION := 512
+    static D3D12_RESOURCE_STATE_VIDEO_DECODE_READ := 65536
+    static D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE := 131072
+    static D3D12_RESOURCE_STATE_VIDEO_PROCESS_READ := 262144
+    static D3D12_RESOURCE_STATE_VIDEO_PROCESS_WRITE := 524288
+    static D3D12_RESOURCE_STATE_VIDEO_ENCODE_READ := 2097152
+    static D3D12_RESOURCE_STATE_VIDEO_ENCODE_WRITE := 8388608
+}
+struct D3D12_RESOURCE_BARRIER_TYPE extends Int32 {
+    static D3D12_RESOURCE_BARRIER_TYPE_TRANSITION := 0
+    static D3D12_RESOURCE_BARRIER_TYPE_ALIASING := 1
+    static D3D12_RESOURCE_BARRIER_TYPE_UAV := 2
+}
+struct D3D12_RESOURCE_TRANSITION_BARRIER {
+    pResource : ID3D12Resource
+    Subresource : UInt32
+    StateBefore : D3D12_RESOURCE_STATES
+    StateAfter : D3D12_RESOURCE_STATES
+}
+struct D3D12_RESOURCE_ALIASING_BARRIER {
+    pResourceBefore : ID3D12Resource
+    pResourceAfter : ID3D12Resource
+}
+struct D3D12_RESOURCE_UAV_BARRIER {
+    pResource : ID3D12Resource
+}
+struct D3D12_RESOURCE_BARRIER_FLAGS extends Int32 {
+    static D3D12_RESOURCE_BARRIER_FLAG_NONE := 0
+    static D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY := 1
+    static D3D12_RESOURCE_BARRIER_FLAG_END_ONLY := 2
+}
+struct D3D12_RESOURCE_BARRIER {
+    Type : D3D12_RESOURCE_BARRIER_TYPE
+    Flags : D3D12_RESOURCE_BARRIER_FLAGS
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Transition : D3D12_RESOURCE_TRANSITION_BARRIER
+            Aliasing : D3D12_RESOURCE_ALIASING_BARRIER
+            UAV : D3D12_RESOURCE_UAV_BARRIER
+        }
+    }
+}
+struct D3D12_SUBRESOURCE_FOOTPRINT {
+    Format : DXGI_FORMAT
+    Width : UInt32
+    Height : UInt32
+    Depth : UInt32
+    RowPitch : UInt32
+}
+struct D3D12_PLACED_SUBRESOURCE_FOOTPRINT {
+    Offset : Int64
+    Footprint : D3D12_SUBRESOURCE_FOOTPRINT
+}
+struct D3D12_TEXTURE_COPY_TYPE extends Int32 {
+    static D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX := 0
+    static D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT := 1
+}
+struct D3D12_TEXTURE_COPY_LOCATION {
+    pResource : ID3D12Resource
+    Type : D3D12_TEXTURE_COPY_TYPE
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            PlacedFootprint : D3D12_PLACED_SUBRESOURCE_FOOTPRINT
+            SubresourceIndex : UInt32
+        }
+    }
+}
+struct D3D12_RESOLVE_MODE extends Int32 {
+    static D3D12_RESOLVE_MODE_DECOMPRESS := 0
+    static D3D12_RESOLVE_MODE_MIN := 1
+    static D3D12_RESOLVE_MODE_MAX := 2
+    static D3D12_RESOLVE_MODE_AVERAGE := 3
+    static D3D12_RESOLVE_MODE_ENCODE_SAMPLER_FEEDBACK := 4
+    static D3D12_RESOLVE_MODE_DECODE_SAMPLER_FEEDBACK := 5
+}
+struct D3D12_SAMPLE_POSITION {
+    X : Int8
+    Y : Int8
+}
+struct D3D12_VIEW_INSTANCE_LOCATION {
+    ViewportArrayIndex : UInt32
+    RenderTargetArrayIndex : UInt32
+}
+struct D3D12_VIEW_INSTANCING_FLAGS extends Int32 {
+    static D3D12_VIEW_INSTANCING_FLAG_NONE := 0
+    static D3D12_VIEW_INSTANCING_FLAG_ENABLE_VIEW_INSTANCE_MASKING := 1
+}
+struct D3D12_VIEW_INSTANCING_DESC {
+    ViewInstanceCount : UInt32
+    pViewInstanceLocations : D3D12_VIEW_INSTANCE_LOCATION.Ptr
+    Flags : D3D12_VIEW_INSTANCING_FLAGS
+}
+struct D3D12_SHADER_COMPONENT_MAPPING extends Int32 {
+    static D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0 := 0
+    static D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1 := 1
+    static D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2 := 2
+    static D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3 := 3
+    static D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0 := 4
+    static D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1 := 5
+}
+struct D3D12_BUFFER_SRV_FLAGS extends Int32 {
+    static D3D12_BUFFER_SRV_FLAG_NONE := 0
+    static D3D12_BUFFER_SRV_FLAG_RAW := 1
+}
+struct D3D12_BUFFER_SRV {
+    FirstElement : Int64
+    NumElements : UInt32
+    StructureByteStride : UInt32
+    Flags : D3D12_BUFFER_SRV_FLAGS
+}
+struct D3D12_TEX1D_SRV {
+    MostDetailedMip : UInt32
+    MipLevels : UInt32
+    ResourceMinLODClamp : Float32
+}
+struct D3D12_TEX1D_ARRAY_SRV {
+    MostDetailedMip : UInt32
+    MipLevels : UInt32
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+    ResourceMinLODClamp : Float32
+}
+struct D3D12_TEX2D_SRV {
+    MostDetailedMip : UInt32
+    MipLevels : UInt32
+    PlaneSlice : UInt32
+    ResourceMinLODClamp : Float32
+}
+struct D3D12_TEX2D_ARRAY_SRV {
+    MostDetailedMip : UInt32
+    MipLevels : UInt32
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+    PlaneSlice : UInt32
+    ResourceMinLODClamp : Float32
+}
+struct D3D12_TEX3D_SRV {
+    MostDetailedMip : UInt32
+    MipLevels : UInt32
+    ResourceMinLODClamp : Float32
+}
+struct D3D12_TEXCUBE_SRV {
+    MostDetailedMip : UInt32
+    MipLevels : UInt32
+    ResourceMinLODClamp : Float32
+}
+struct D3D12_TEXCUBE_ARRAY_SRV {
+    MostDetailedMip : UInt32
+    MipLevels : UInt32
+    First2DArrayFace : UInt32
+    NumCubes : UInt32
+    ResourceMinLODClamp : Float32
+}
+struct D3D12_TEX2DMS_SRV {
+    UnusedField_NothingToDefine : UInt32
+}
+struct D3D12_TEX2DMS_ARRAY_SRV {
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV {
+    Location : Int64
+}
+struct D3D12_BUFFER_SRV_BYTE_OFFSET {
+    Offset : Int64
+    Size : Int64
+    StructureByteStride : UInt32
+    Flags : D3D12_BUFFER_SRV_FLAGS
+}
+struct D3D12_SRV_DIMENSION extends Int32 {
+    static D3D12_SRV_DIMENSION_UNKNOWN := 0
+    static D3D12_SRV_DIMENSION_BUFFER := 1
+    static D3D12_SRV_DIMENSION_TEXTURE1D := 2
+    static D3D12_SRV_DIMENSION_TEXTURE1DARRAY := 3
+    static D3D12_SRV_DIMENSION_TEXTURE2D := 4
+    static D3D12_SRV_DIMENSION_TEXTURE2DARRAY := 5
+    static D3D12_SRV_DIMENSION_TEXTURE2DMS := 6
+    static D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY := 7
+    static D3D12_SRV_DIMENSION_TEXTURE3D := 8
+    static D3D12_SRV_DIMENSION_TEXTURECUBE := 9
+    static D3D12_SRV_DIMENSION_TEXTURECUBEARRAY := 10
+    static D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE := 11
+    static D3D12_SRV_DIMENSION_BUFFER_BYTE_OFFSET := 12
+}
+struct D3D12_SHADER_RESOURCE_VIEW_DESC {
+    Format : DXGI_FORMAT
+    ViewDimension : D3D12_SRV_DIMENSION
+    Shader4ComponentMapping : UInt32
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Buffer : D3D12_BUFFER_SRV
+            Texture1D : D3D12_TEX1D_SRV
+            Texture1DArray : D3D12_TEX1D_ARRAY_SRV
+            Texture2D : D3D12_TEX2D_SRV
+            Texture2DArray : D3D12_TEX2D_ARRAY_SRV
+            Texture2DMS : D3D12_TEX2DMS_SRV
+            Texture2DMSArray : D3D12_TEX2DMS_ARRAY_SRV
+            Texture3D : D3D12_TEX3D_SRV
+            TextureCube : D3D12_TEXCUBE_SRV
+            TextureCubeArray : D3D12_TEXCUBE_ARRAY_SRV
+            RaytracingAccelerationStructure : D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV
+            BufferByteOffset : D3D12_BUFFER_SRV_BYTE_OFFSET
+        }
+    }
+}
+struct D3D12_CONSTANT_BUFFER_VIEW_DESC {
+    BufferLocation : Int64
+    SizeInBytes : UInt32
+}
+struct D3D12_FILTER extends Int32 {
+    static D3D12_FILTER_MIN_MAG_MIP_POINT := 0
+    static D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR := 1
+    static D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT := 4
+    static D3D12_FILTER_MIN_POINT_MAG_MIP_LINEAR := 5
+    static D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT := 16
+    static D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR := 17
+    static D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT := 20
+    static D3D12_FILTER_MIN_MAG_MIP_LINEAR := 21
+    static D3D12_FILTER_MIN_MAG_ANISOTROPIC_MIP_POINT := 84
+    static D3D12_FILTER_ANISOTROPIC := 85
+    static D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT := 128
+    static D3D12_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR := 129
+    static D3D12_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT := 132
+    static D3D12_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR := 133
+    static D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT := 144
+    static D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR := 145
+    static D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT := 148
+    static D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR := 149
+    static D3D12_FILTER_COMPARISON_MIN_MAG_ANISOTROPIC_MIP_POINT := 212
+    static D3D12_FILTER_COMPARISON_ANISOTROPIC := 213
+    static D3D12_FILTER_MINIMUM_MIN_MAG_MIP_POINT := 256
+    static D3D12_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR := 257
+    static D3D12_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT := 260
+    static D3D12_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR := 261
+    static D3D12_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT := 272
+    static D3D12_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR := 273
+    static D3D12_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT := 276
+    static D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR := 277
+    static D3D12_FILTER_MINIMUM_MIN_MAG_ANISOTROPIC_MIP_POINT := 340
+    static D3D12_FILTER_MINIMUM_ANISOTROPIC := 341
+    static D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT := 384
+    static D3D12_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR := 385
+    static D3D12_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT := 388
+    static D3D12_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR := 389
+    static D3D12_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT := 400
+    static D3D12_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR := 401
+    static D3D12_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT := 404
+    static D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR := 405
+    static D3D12_FILTER_MAXIMUM_MIN_MAG_ANISOTROPIC_MIP_POINT := 468
+    static D3D12_FILTER_MAXIMUM_ANISOTROPIC := 469
+}
+struct D3D12_FILTER_TYPE extends Int32 {
+    static D3D12_FILTER_TYPE_POINT := 0
+    static D3D12_FILTER_TYPE_LINEAR := 1
+}
+struct D3D12_FILTER_REDUCTION_TYPE extends Int32 {
+    static D3D12_FILTER_REDUCTION_TYPE_STANDARD := 0
+    static D3D12_FILTER_REDUCTION_TYPE_COMPARISON := 1
+    static D3D12_FILTER_REDUCTION_TYPE_MINIMUM := 2
+    static D3D12_FILTER_REDUCTION_TYPE_MAXIMUM := 3
+}
+struct D3D12_TEXTURE_ADDRESS_MODE extends Int32 {
+    static D3D12_TEXTURE_ADDRESS_MODE_WRAP := 1
+    static D3D12_TEXTURE_ADDRESS_MODE_MIRROR := 2
+    static D3D12_TEXTURE_ADDRESS_MODE_CLAMP := 3
+    static D3D12_TEXTURE_ADDRESS_MODE_BORDER := 4
+    static D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE := 5
+}
+struct D3D12_SAMPLER_DESC {
+    Filter : D3D12_FILTER
+    AddressU : D3D12_TEXTURE_ADDRESS_MODE
+    AddressV : D3D12_TEXTURE_ADDRESS_MODE
+    AddressW : D3D12_TEXTURE_ADDRESS_MODE
+    MipLODBias : Float32
+    MaxAnisotropy : UInt32
+    ComparisonFunc : D3D12_COMPARISON_FUNC
+    BorderColor : Float32[4]
+    MinLOD : Float32
+    MaxLOD : Float32
+}
+struct D3D12_SAMPLER_FLAGS extends Int32 {
+    static D3D12_SAMPLER_FLAG_NONE := 0
+    static D3D12_SAMPLER_FLAG_UINT_BORDER_COLOR := 1
+    static D3D12_SAMPLER_FLAG_NON_NORMALIZED_COORDINATES := 2
+}
+struct D3D12_SAMPLER_DESC2 {
+    Filter : D3D12_FILTER
+    AddressU : D3D12_TEXTURE_ADDRESS_MODE
+    AddressV : D3D12_TEXTURE_ADDRESS_MODE
+    AddressW : D3D12_TEXTURE_ADDRESS_MODE
+    MipLODBias : Float32
+    MaxAnisotropy : UInt32
+    ComparisonFunc : D3D12_COMPARISON_FUNC
+    Anonymous : this._Anonymous_e__Union
+    MinLOD : Float32
+    MaxLOD : Float32
+    Flags : D3D12_SAMPLER_FLAGS
+    struct _Anonymous_e__Union {
+        union {
+            FloatBorderColor : Float32[4]
+            UintBorderColor : UInt32[4]
+        }
+    }
+}
+struct D3D12_BUFFER_UAV_FLAGS extends Int32 {
+    static D3D12_BUFFER_UAV_FLAG_NONE := 0
+    static D3D12_BUFFER_UAV_FLAG_RAW := 1
+}
+struct D3D12_BUFFER_UAV {
+    FirstElement : Int64
+    NumElements : UInt32
+    StructureByteStride : UInt32
+    CounterOffsetInBytes : Int64
+    Flags : D3D12_BUFFER_UAV_FLAGS
+}
+struct D3D12_TEX1D_UAV {
+    MipSlice : UInt32
+}
+struct D3D12_TEX1D_ARRAY_UAV {
+    MipSlice : UInt32
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+}
+struct D3D12_TEX2D_UAV {
+    MipSlice : UInt32
+    PlaneSlice : UInt32
+}
+struct D3D12_TEX2D_ARRAY_UAV {
+    MipSlice : UInt32
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+    PlaneSlice : UInt32
+}
+struct D3D12_TEX2DMS_UAV {
+    UnusedField_NothingToDefine : UInt32
+}
+struct D3D12_TEX2DMS_ARRAY_UAV {
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+}
+struct D3D12_TEX3D_UAV {
+    MipSlice : UInt32
+    FirstWSlice : UInt32
+    WSize : UInt32
+}
+struct D3D12_BUFFER_UAV_BYTE_OFFSET {
+    Offset : Int64
+    Size : Int64
+    StructureByteStride : UInt32
+    CounterOffsetInBytes : Int64
+    Flags : D3D12_BUFFER_UAV_FLAGS
+}
+struct D3D12_UAV_DIMENSION extends Int32 {
+    static D3D12_UAV_DIMENSION_UNKNOWN := 0
+    static D3D12_UAV_DIMENSION_BUFFER := 1
+    static D3D12_UAV_DIMENSION_TEXTURE1D := 2
+    static D3D12_UAV_DIMENSION_TEXTURE1DARRAY := 3
+    static D3D12_UAV_DIMENSION_TEXTURE2D := 4
+    static D3D12_UAV_DIMENSION_TEXTURE2DARRAY := 5
+    static D3D12_UAV_DIMENSION_TEXTURE2DMS := 6
+    static D3D12_UAV_DIMENSION_TEXTURE2DMSARRAY := 7
+    static D3D12_UAV_DIMENSION_TEXTURE3D := 8
+    static D3D12_UAV_DIMENSION_BUFFER_BYTE_OFFSET := 9
+}
+struct D3D12_UNORDERED_ACCESS_VIEW_DESC {
+    Format : DXGI_FORMAT
+    ViewDimension : D3D12_UAV_DIMENSION
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Buffer : D3D12_BUFFER_UAV
+            Texture1D : D3D12_TEX1D_UAV
+            Texture1DArray : D3D12_TEX1D_ARRAY_UAV
+            Texture2D : D3D12_TEX2D_UAV
+            Texture2DArray : D3D12_TEX2D_ARRAY_UAV
+            Texture2DMS : D3D12_TEX2DMS_UAV
+            Texture2DMSArray : D3D12_TEX2DMS_ARRAY_UAV
+            Texture3D : D3D12_TEX3D_UAV
+            BufferByteOffset : D3D12_BUFFER_UAV_BYTE_OFFSET
+        }
+    }
+}
+struct D3D12_BUFFER_RTV {
+    FirstElement : Int64
+    NumElements : UInt32
+}
+struct D3D12_TEX1D_RTV {
+    MipSlice : UInt32
+}
+struct D3D12_TEX1D_ARRAY_RTV {
+    MipSlice : UInt32
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+}
+struct D3D12_TEX2D_RTV {
+    MipSlice : UInt32
+    PlaneSlice : UInt32
+}
+struct D3D12_TEX2DMS_RTV {
+    UnusedField_NothingToDefine : UInt32
+}
+struct D3D12_TEX2D_ARRAY_RTV {
+    MipSlice : UInt32
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+    PlaneSlice : UInt32
+}
+struct D3D12_TEX2DMS_ARRAY_RTV {
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+}
+struct D3D12_TEX3D_RTV {
+    MipSlice : UInt32
+    FirstWSlice : UInt32
+    WSize : UInt32
+}
+struct D3D12_RTV_DIMENSION extends Int32 {
+    static D3D12_RTV_DIMENSION_UNKNOWN := 0
+    static D3D12_RTV_DIMENSION_BUFFER := 1
+    static D3D12_RTV_DIMENSION_TEXTURE1D := 2
+    static D3D12_RTV_DIMENSION_TEXTURE1DARRAY := 3
+    static D3D12_RTV_DIMENSION_TEXTURE2D := 4
+    static D3D12_RTV_DIMENSION_TEXTURE2DARRAY := 5
+    static D3D12_RTV_DIMENSION_TEXTURE2DMS := 6
+    static D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY := 7
+    static D3D12_RTV_DIMENSION_TEXTURE3D := 8
+}
+struct D3D12_RENDER_TARGET_VIEW_DESC {
+    Format : DXGI_FORMAT
+    ViewDimension : D3D12_RTV_DIMENSION
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Buffer : D3D12_BUFFER_RTV
+            Texture1D : D3D12_TEX1D_RTV
+            Texture1DArray : D3D12_TEX1D_ARRAY_RTV
+            Texture2D : D3D12_TEX2D_RTV
+            Texture2DArray : D3D12_TEX2D_ARRAY_RTV
+            Texture2DMS : D3D12_TEX2DMS_RTV
+            Texture2DMSArray : D3D12_TEX2DMS_ARRAY_RTV
+            Texture3D : D3D12_TEX3D_RTV
+        }
+    }
+}
+struct D3D12_TEX1D_DSV {
+    MipSlice : UInt32
+}
+struct D3D12_TEX1D_ARRAY_DSV {
+    MipSlice : UInt32
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+}
+struct D3D12_TEX2D_DSV {
+    MipSlice : UInt32
+}
+struct D3D12_TEX2D_ARRAY_DSV {
+    MipSlice : UInt32
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+}
+struct D3D12_TEX2DMS_DSV {
+    UnusedField_NothingToDefine : UInt32
+}
+struct D3D12_TEX2DMS_ARRAY_DSV {
+    FirstArraySlice : UInt32
+    ArraySize : UInt32
+}
+struct D3D12_DSV_FLAGS extends Int32 {
+    static D3D12_DSV_FLAG_NONE := 0
+    static D3D12_DSV_FLAG_READ_ONLY_DEPTH := 1
+    static D3D12_DSV_FLAG_READ_ONLY_STENCIL := 2
+}
+struct D3D12_DSV_DIMENSION extends Int32 {
+    static D3D12_DSV_DIMENSION_UNKNOWN := 0
+    static D3D12_DSV_DIMENSION_TEXTURE1D := 1
+    static D3D12_DSV_DIMENSION_TEXTURE1DARRAY := 2
+    static D3D12_DSV_DIMENSION_TEXTURE2D := 3
+    static D3D12_DSV_DIMENSION_TEXTURE2DARRAY := 4
+    static D3D12_DSV_DIMENSION_TEXTURE2DMS := 5
+    static D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY := 6
+}
+struct D3D12_DEPTH_STENCIL_VIEW_DESC {
+    Format : DXGI_FORMAT
+    ViewDimension : D3D12_DSV_DIMENSION
+    Flags : D3D12_DSV_FLAGS
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Texture1D : D3D12_TEX1D_DSV
+            Texture1DArray : D3D12_TEX1D_ARRAY_DSV
+            Texture2D : D3D12_TEX2D_DSV
+            Texture2DArray : D3D12_TEX2D_ARRAY_DSV
+            Texture2DMS : D3D12_TEX2DMS_DSV
+            Texture2DMSArray : D3D12_TEX2DMS_ARRAY_DSV
+        }
+    }
+}
+struct D3D12_CLEAR_FLAGS extends Int32 {
+    static D3D12_CLEAR_FLAG_DEPTH := 1
+    static D3D12_CLEAR_FLAG_STENCIL := 2
+}
+struct D3D12_FENCE_FLAGS extends Int32 {
+    static D3D12_FENCE_FLAG_NONE := 0
+    static D3D12_FENCE_FLAG_SHARED := 1
+    static D3D12_FENCE_FLAG_SHARED_CROSS_ADAPTER := 2
+    static D3D12_FENCE_FLAG_NON_MONITORED := 4
+}
+struct D3D12_DESCRIPTOR_HEAP_TYPE extends Int32 {
+    static D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV := 0
+    static D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER := 1
+    static D3D12_DESCRIPTOR_HEAP_TYPE_RTV := 2
+    static D3D12_DESCRIPTOR_HEAP_TYPE_DSV := 3
+    static D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES := 4
+}
+struct D3D12_DESCRIPTOR_HEAP_FLAGS extends Int32 {
+    static D3D12_DESCRIPTOR_HEAP_FLAG_NONE := 0
+    static D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE := 1
+}
+struct D3D12_DESCRIPTOR_HEAP_DESC {
+    Type : D3D12_DESCRIPTOR_HEAP_TYPE
+    NumDescriptors : UInt32
+    Flags : D3D12_DESCRIPTOR_HEAP_FLAGS
+    NodeMask : UInt32
+}
+struct D3D12_DESCRIPTOR_RANGE_TYPE extends Int32 {
+    static D3D12_DESCRIPTOR_RANGE_TYPE_SRV := 0
+    static D3D12_DESCRIPTOR_RANGE_TYPE_UAV := 1
+    static D3D12_DESCRIPTOR_RANGE_TYPE_CBV := 2
+    static D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER := 3
+}
+struct D3D12_DESCRIPTOR_RANGE {
+    RangeType : D3D12_DESCRIPTOR_RANGE_TYPE
+    NumDescriptors : UInt32
+    BaseShaderRegister : UInt32
+    RegisterSpace : UInt32
+    OffsetInDescriptorsFromTableStart : UInt32
+}
+struct D3D12_ROOT_DESCRIPTOR_TABLE {
+    NumDescriptorRanges : UInt32
+    pDescriptorRanges : D3D12_DESCRIPTOR_RANGE.Ptr
+}
+struct D3D12_ROOT_CONSTANTS {
+    ShaderRegister : UInt32
+    RegisterSpace : UInt32
+    Num32BitValues : UInt32
+}
+struct D3D12_ROOT_DESCRIPTOR {
+    ShaderRegister : UInt32
+    RegisterSpace : UInt32
+}
+struct D3D12_SHADER_VISIBILITY extends Int32 {
+    static D3D12_SHADER_VISIBILITY_ALL := 0
+    static D3D12_SHADER_VISIBILITY_VERTEX := 1
+    static D3D12_SHADER_VISIBILITY_HULL := 2
+    static D3D12_SHADER_VISIBILITY_DOMAIN := 3
+    static D3D12_SHADER_VISIBILITY_GEOMETRY := 4
+    static D3D12_SHADER_VISIBILITY_PIXEL := 5
+    static D3D12_SHADER_VISIBILITY_AMPLIFICATION := 6
+    static D3D12_SHADER_VISIBILITY_MESH := 7
+}
+struct D3D12_ROOT_PARAMETER_TYPE extends Int32 {
+    static D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE := 0
+    static D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS := 1
+    static D3D12_ROOT_PARAMETER_TYPE_CBV := 2
+    static D3D12_ROOT_PARAMETER_TYPE_SRV := 3
+    static D3D12_ROOT_PARAMETER_TYPE_UAV := 4
+}
+struct D3D12_ROOT_PARAMETER {
+    ParameterType : D3D12_ROOT_PARAMETER_TYPE
+    Anonymous : this._Anonymous_e__Union
+    ShaderVisibility : D3D12_SHADER_VISIBILITY
+    struct _Anonymous_e__Union {
+        union {
+            DescriptorTable : D3D12_ROOT_DESCRIPTOR_TABLE
+            Constants : D3D12_ROOT_CONSTANTS
+            Descriptor : D3D12_ROOT_DESCRIPTOR
+        }
+    }
+}
+struct D3D12_ROOT_SIGNATURE_FLAGS extends Int32 {
+    static D3D12_ROOT_SIGNATURE_FLAG_NONE := 0
+    static D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT := 1
+    static D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS := 2
+    static D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS := 4
+    static D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS := 8
+    static D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS := 16
+    static D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS := 32
+    static D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT := 64
+    static D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE := 128
+    static D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS := 256
+    static D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS := 512
+    static D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED := 1024
+    static D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED := 2048
+}
+struct D3D12_STATIC_BORDER_COLOR extends Int32 {
+    static D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK := 0
+    static D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK := 1
+    static D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE := 2
+    static D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT := 3
+    static D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE_UINT := 4
+}
+struct D3D12_STATIC_SAMPLER_DESC {
+    Filter : D3D12_FILTER
+    AddressU : D3D12_TEXTURE_ADDRESS_MODE
+    AddressV : D3D12_TEXTURE_ADDRESS_MODE
+    AddressW : D3D12_TEXTURE_ADDRESS_MODE
+    MipLODBias : Float32
+    MaxAnisotropy : UInt32
+    ComparisonFunc : D3D12_COMPARISON_FUNC
+    BorderColor : D3D12_STATIC_BORDER_COLOR
+    MinLOD : Float32
+    MaxLOD : Float32
+    ShaderRegister : UInt32
+    RegisterSpace : UInt32
+    ShaderVisibility : D3D12_SHADER_VISIBILITY
+}
+struct D3D12_STATIC_SAMPLER_DESC1 {
+    Filter : D3D12_FILTER
+    AddressU : D3D12_TEXTURE_ADDRESS_MODE
+    AddressV : D3D12_TEXTURE_ADDRESS_MODE
+    AddressW : D3D12_TEXTURE_ADDRESS_MODE
+    MipLODBias : Float32
+    MaxAnisotropy : UInt32
+    ComparisonFunc : D3D12_COMPARISON_FUNC
+    BorderColor : D3D12_STATIC_BORDER_COLOR
+    MinLOD : Float32
+    MaxLOD : Float32
+    ShaderRegister : UInt32
+    RegisterSpace : UInt32
+    ShaderVisibility : D3D12_SHADER_VISIBILITY
+    Flags : D3D12_SAMPLER_FLAGS
+}
+struct D3D12_ROOT_SIGNATURE_DESC {
+    NumParameters : UInt32
+    pParameters : D3D12_ROOT_PARAMETER.Ptr
+    NumStaticSamplers : UInt32
+    pStaticSamplers : D3D12_STATIC_SAMPLER_DESC.Ptr
+    Flags : D3D12_ROOT_SIGNATURE_FLAGS
+}
+struct D3D12_DESCRIPTOR_RANGE_FLAGS extends Int32 {
+    static D3D12_DESCRIPTOR_RANGE_FLAG_NONE := 0
+    static D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE := 1
+    static D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE := 2
+    static D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE := 4
+    static D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC := 8
+    static D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS := 65536
+}
+struct D3D12_DESCRIPTOR_RANGE1 {
+    RangeType : D3D12_DESCRIPTOR_RANGE_TYPE
+    NumDescriptors : UInt32
+    BaseShaderRegister : UInt32
+    RegisterSpace : UInt32
+    Flags : D3D12_DESCRIPTOR_RANGE_FLAGS
+    OffsetInDescriptorsFromTableStart : UInt32
+}
+struct D3D12_ROOT_DESCRIPTOR_TABLE1 {
+    NumDescriptorRanges : UInt32
+    pDescriptorRanges : D3D12_DESCRIPTOR_RANGE1.Ptr
+}
+struct D3D12_ROOT_DESCRIPTOR_FLAGS extends Int32 {
+    static D3D12_ROOT_DESCRIPTOR_FLAG_NONE := 0
+    static D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE := 2
+    static D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE := 4
+    static D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC := 8
+}
+struct D3D12_ROOT_DESCRIPTOR1 {
+    ShaderRegister : UInt32
+    RegisterSpace : UInt32
+    Flags : D3D12_ROOT_DESCRIPTOR_FLAGS
+}
+struct D3D12_ROOT_PARAMETER1 {
+    ParameterType : D3D12_ROOT_PARAMETER_TYPE
+    Anonymous : this._Anonymous_e__Union
+    ShaderVisibility : D3D12_SHADER_VISIBILITY
+    struct _Anonymous_e__Union {
+        union {
+            DescriptorTable : D3D12_ROOT_DESCRIPTOR_TABLE1
+            Constants : D3D12_ROOT_CONSTANTS
+            Descriptor : D3D12_ROOT_DESCRIPTOR1
+        }
+    }
+}
+struct D3D12_ROOT_SIGNATURE_DESC1 {
+    NumParameters : UInt32
+    pParameters : D3D12_ROOT_PARAMETER1.Ptr
+    NumStaticSamplers : UInt32
+    pStaticSamplers : D3D12_STATIC_SAMPLER_DESC.Ptr
+    Flags : D3D12_ROOT_SIGNATURE_FLAGS
+}
+struct D3D12_ROOT_SIGNATURE_DESC2 {
+    NumParameters : UInt32
+    pParameters : D3D12_ROOT_PARAMETER1.Ptr
+    NumStaticSamplers : UInt32
+    pStaticSamplers : D3D12_STATIC_SAMPLER_DESC1.Ptr
+    Flags : D3D12_ROOT_SIGNATURE_FLAGS
+}
+struct D3D12_VERSIONED_ROOT_SIGNATURE_DESC {
+    Version : D3D_ROOT_SIGNATURE_VERSION
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Desc_1_0 : D3D12_ROOT_SIGNATURE_DESC
+            Desc_1_1 : D3D12_ROOT_SIGNATURE_DESC1
+            Desc_1_2 : D3D12_ROOT_SIGNATURE_DESC2
+        }
+    }
+}
+struct ID3D12RootSignatureDeserializer extends IUnknown {
+    static IID := "{34AB647B-3CC8-46AC-841B-C0965645C046}"
+    GetRootSignatureDesc()
+      => ComCall(3, this.p, D3D12_ROOT_SIGNATURE_DESC.Ptr)
+}
+struct ID3D12VersionedRootSignatureDeserializer extends IUnknown {
+    static IID := "{7F91CE67-090C-4BB7-B78E-ED8FF2E31DA0}"
+    GetRootSignatureDescAtVersion(convertToVersion, ppDesc)
+      => ComCall(3, this.p, D3D_ROOT_SIGNATURE_VERSION, convertToVersion, D3D12_VERSIONED_ROOT_SIGNATURE_DESC.Ptr.Ptr, ppDesc)
+    GetUnconvertedRootSignatureDesc()
+      => ComCall(4, this.p, D3D12_VERSIONED_ROOT_SIGNATURE_DESC.Ptr)
+}
+struct PFN_D3D12_SERIALIZE_ROOT_SIGNATURE extends FunctionPointer {
+    static Types := [D3D12_ROOT_SIGNATURE_DESC.Ptr, D3D_ROOT_SIGNATURE_VERSION, ID3DBlob.Ptr, ID3DBlob.Ptr, HRESULT]
+}
+struct PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER extends FunctionPointer {
+    static Types := [Struct.Ptr, IntPtr, GUID.Ptr, Struct.Ptr.Ptr, HRESULT]
+}
+struct PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE extends FunctionPointer {
+    static Types := [D3D12_VERSIONED_ROOT_SIGNATURE_DESC.Ptr, ID3DBlob.Ptr, ID3DBlob.Ptr, HRESULT]
+}
+struct PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER extends FunctionPointer {
+    static Types := [Struct.Ptr, IntPtr, GUID.Ptr, Struct.Ptr.Ptr, HRESULT]
+}
+struct PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER_FROM_SUBOBJECT_IN_LIBRARY extends FunctionPointer {
+    static Types := [Struct.Ptr, IntPtr, PWSTR, GUID.Ptr, Struct.Ptr.Ptr, HRESULT]
+}
+struct D3D12_CPU_DESCRIPTOR_HANDLE {
+    ptr : IntPtr
+}
+struct D3D12_GPU_DESCRIPTOR_HANDLE {
+    ptr : Int64
+}
+struct D3D12_DISCARD_REGION {
+    NumRects : UInt32
+    pRects : RECT.Ptr
+    FirstSubresource : UInt32
+    NumSubresources : UInt32
+}
+struct D3D12_QUERY_HEAP_TYPE extends Int32 {
+    static D3D12_QUERY_HEAP_TYPE_OCCLUSION := 0
+    static D3D12_QUERY_HEAP_TYPE_TIMESTAMP := 1
+    static D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS := 2
+    static D3D12_QUERY_HEAP_TYPE_SO_STATISTICS := 3
+    static D3D12_QUERY_HEAP_TYPE_VIDEO_DECODE_STATISTICS := 4
+    static D3D12_QUERY_HEAP_TYPE_COPY_QUEUE_TIMESTAMP := 5
+    static D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS1 := 7
+}
+struct D3D12_QUERY_HEAP_DESC {
+    Type : D3D12_QUERY_HEAP_TYPE
+    Count : UInt32
+    NodeMask : UInt32
+}
+struct D3D12_QUERY_TYPE extends Int32 {
+    static D3D12_QUERY_TYPE_OCCLUSION := 0
+    static D3D12_QUERY_TYPE_BINARY_OCCLUSION := 1
+    static D3D12_QUERY_TYPE_TIMESTAMP := 2
+    static D3D12_QUERY_TYPE_PIPELINE_STATISTICS := 3
+    static D3D12_QUERY_TYPE_SO_STATISTICS_STREAM0 := 4
+    static D3D12_QUERY_TYPE_SO_STATISTICS_STREAM1 := 5
+    static D3D12_QUERY_TYPE_SO_STATISTICS_STREAM2 := 6
+    static D3D12_QUERY_TYPE_SO_STATISTICS_STREAM3 := 7
+    static D3D12_QUERY_TYPE_VIDEO_DECODE_STATISTICS := 8
+    static D3D12_QUERY_TYPE_PIPELINE_STATISTICS1 := 10
+}
+struct D3D12_PREDICATION_OP extends Int32 {
+    static D3D12_PREDICATION_OP_EQUAL_ZERO := 0
+    static D3D12_PREDICATION_OP_NOT_EQUAL_ZERO := 1
+}
+struct D3D12_QUERY_DATA_PIPELINE_STATISTICS {
+    IAVertices : Int64
+    IAPrimitives : Int64
+    VSInvocations : Int64
+    GSInvocations : Int64
+    GSPrimitives : Int64
+    CInvocations : Int64
+    CPrimitives : Int64
+    PSInvocations : Int64
+    HSInvocations : Int64
+    DSInvocations : Int64
+    CSInvocations : Int64
+}
+struct D3D12_QUERY_DATA_PIPELINE_STATISTICS1 {
+    IAVertices : Int64
+    IAPrimitives : Int64
+    VSInvocations : Int64
+    GSInvocations : Int64
+    GSPrimitives : Int64
+    CInvocations : Int64
+    CPrimitives : Int64
+    PSInvocations : Int64
+    HSInvocations : Int64
+    DSInvocations : Int64
+    CSInvocations : Int64
+    ASInvocations : Int64
+    MSInvocations : Int64
+    MSPrimitives : Int64
+}
+struct D3D12_QUERY_DATA_SO_STATISTICS {
+    NumPrimitivesWritten : Int64
+    PrimitivesStorageNeeded : Int64
+}
+struct D3D12_STREAM_OUTPUT_BUFFER_VIEW {
+    BufferLocation : Int64
+    SizeInBytes : Int64
+    BufferFilledSizeLocation : Int64
+}
+struct D3D12_DRAW_ARGUMENTS {
+    VertexCountPerInstance : UInt32
+    InstanceCount : UInt32
+    StartVertexLocation : UInt32
+    StartInstanceLocation : UInt32
+}
+struct D3D12_DRAW_INDEXED_ARGUMENTS {
+    IndexCountPerInstance : UInt32
+    InstanceCount : UInt32
+    StartIndexLocation : UInt32
+    BaseVertexLocation : Int32
+    StartInstanceLocation : UInt32
+}
+struct D3D12_DISPATCH_ARGUMENTS {
+    ThreadGroupCountX : UInt32
+    ThreadGroupCountY : UInt32
+    ThreadGroupCountZ : UInt32
+}
+struct D3D12_VERTEX_BUFFER_VIEW {
+    BufferLocation : Int64
+    SizeInBytes : UInt32
+    StrideInBytes : UInt32
+}
+struct D3D12_INDEX_BUFFER_VIEW {
+    BufferLocation : Int64
+    SizeInBytes : UInt32
+    Format : DXGI_FORMAT
+}
+struct D3D12_INDIRECT_ARGUMENT_TYPE extends Int32 {
+    static D3D12_INDIRECT_ARGUMENT_TYPE_DRAW := 0
+    static D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED := 1
+    static D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH := 2
+    static D3D12_INDIRECT_ARGUMENT_TYPE_VERTEX_BUFFER_VIEW := 3
+    static D3D12_INDIRECT_ARGUMENT_TYPE_INDEX_BUFFER_VIEW := 4
+    static D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT := 5
+    static D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW := 6
+    static D3D12_INDIRECT_ARGUMENT_TYPE_SHADER_RESOURCE_VIEW := 7
+    static D3D12_INDIRECT_ARGUMENT_TYPE_UNORDERED_ACCESS_VIEW := 8
+    static D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS := 9
+    static D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH := 10
+    static D3D12_INDIRECT_ARGUMENT_TYPE_INCREMENTING_CONSTANT := 11
+}
+struct D3D12_INDIRECT_ARGUMENT_DESC {
+    Type : D3D12_INDIRECT_ARGUMENT_TYPE
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            VertexBuffer : this._VertexBuffer_e__Struct
+            Constant : this._Constant_e__Struct
+            ConstantBufferView : this._ConstantBufferView_e__Struct
+            ShaderResourceView : this._ShaderResourceView_e__Struct
+            UnorderedAccessView : this._UnorderedAccessView_e__Struct
+            IncrementingConstant : this._IncrementingConstant_e__Struct
+        }
+        struct _VertexBuffer_e__Struct {
+            Slot : UInt32
+        }
+        struct _Constant_e__Struct {
+            RootParameterIndex : UInt32
+            DestOffsetIn32BitValues : UInt32
+            Num32BitValuesToSet : UInt32
+        }
+        struct _ConstantBufferView_e__Struct {
+            RootParameterIndex : UInt32
+        }
+        struct _ShaderResourceView_e__Struct {
+            RootParameterIndex : UInt32
+        }
+        struct _UnorderedAccessView_e__Struct {
+            RootParameterIndex : UInt32
+        }
+        struct _IncrementingConstant_e__Struct {
+            RootParameterIndex : UInt32
+            DestOffsetIn32BitValues : UInt32
+        }
+    }
+}
+struct D3D12_COMMAND_SIGNATURE_DESC {
+    ByteStride : UInt32
+    NumArgumentDescs : UInt32
+    pArgumentDescs : D3D12_INDIRECT_ARGUMENT_DESC.Ptr
+    NodeMask : UInt32
+}
+struct ID3D12Pageable extends ID3D12DeviceChild {
+    static IID := "{63EE58FB-1268-4835-86DA-F008CE62F0D6}"
+}
+struct ID3D12Heap extends ID3D12Pageable {
+    static IID := "{6B3B2502-6E51-45B3-90EE-9884265E8DF3}"
+    GetDesc()
+      => ComCall(8, this.p, D3D12_HEAP_DESC)
+}
+struct ID3D12Resource extends ID3D12Pageable {
+    static IID := "{696442BE-A72E-4059-BC79-5B5C98040FAD}"
+    Map(Subresource, pReadRange?, ppData?)
+      => ComCall(8, this.p, UInt32, Subresource, D3D12_RANGE.Ptr, pReadRange?, Struct.Ptr.Ptr, ppData?)
+    Unmap(Subresource, pWrittenRange?)
+      => ComCall(9, this.p, UInt32, Subresource, D3D12_RANGE.Ptr, pWrittenRange?, "void")
+    GetDesc()
+      => ComCall(10, this.p, D3D12_RESOURCE_DESC)
+    GetGPUVirtualAddress()
+      => ComCall(11, this.p, Int64)
+    WriteToSubresource(DstSubresource, pDstBox?, pSrcData, SrcRowPitch, SrcDepthPitch)
+      => ComCall(12, this.p, UInt32, DstSubresource, D3D12_BOX.Ptr, pDstBox?, Struct.Ptr, pSrcData, UInt32, SrcRowPitch, UInt32, SrcDepthPitch)
+    ReadFromSubresource(pDstData, DstRowPitch, DstDepthPitch, SrcSubresource, pSrcBox?)
+      => ComCall(13, this.p, Struct.Ptr, pDstData, UInt32, DstRowPitch, UInt32, DstDepthPitch, UInt32, SrcSubresource, D3D12_BOX.Ptr, pSrcBox?)
+    GetHeapProperties(pHeapProperties?, pHeapFlags?)
+      => ComCall(14, this.p, D3D12_HEAP_PROPERTIES.Ptr, pHeapProperties?, D3D12_HEAP_FLAGS.Ptr, pHeapFlags?)
+}
+struct ID3D12CommandAllocator extends ID3D12Pageable {
+    static IID := "{6102DEE4-AF59-4B09-B999-B44D73F09B24}"
+    Reset()
+      => ComCall(8, this.p)
+}
+struct ID3D12Fence extends ID3D12Pageable {
+    static IID := "{0A753DCF-C4D8-4B91-ADF6-BE5A60D95A76}"
+    GetCompletedValue()
+      => ComCall(8, this.p, Int64)
+    SetEventOnCompletion(Value, hEvent)
+      => ComCall(9, this.p, Int64, Value, HANDLE, hEvent)
+    Signal(Value)
+      => ComCall(10, this.p, Int64, Value)
+}
+struct ID3D12Fence1 extends ID3D12Fence {
+    static IID := "{433685FE-E22B-4CA0-A8DB-B5B4F4DD0E4A}"
+    GetCreationFlags()
+      => ComCall(11, this.p, D3D12_FENCE_FLAGS)
+}
+struct ID3D12PipelineState extends ID3D12Pageable {
+    static IID := "{765A30F3-F624-4C6F-A828-ACE948622445}"
+    GetCachedBlob(ppBlob)
+      => ComCall(8, this.p, ID3DBlob.Ptr, ppBlob)
+}
+struct ID3D12PipelineState1 extends ID3D12PipelineState {
+    static IID := "{5646804C-9638-48F7-9182-B3EE5A6B60FB}"
+    GetRootSignature(riid, ppvRootSignature)
+      => ComCall(9, this.p, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvRootSignature)
+}
+struct ID3D12DescriptorHeap extends ID3D12Pageable {
+    static IID := "{8EFB471D-616C-4F49-90F7-127BB763FA51}"
+    GetDesc()
+      => ComCall(8, this.p, D3D12_DESCRIPTOR_HEAP_DESC)
+    GetCPUDescriptorHandleForHeapStart()
+      => ComCall(9, this.p, D3D12_CPU_DESCRIPTOR_HANDLE)
+    GetGPUDescriptorHandleForHeapStart()
+      => ComCall(10, this.p, D3D12_GPU_DESCRIPTOR_HANDLE)
+}
+struct ID3D12QueryHeap extends ID3D12Pageable {
+    static IID := "{0D9658AE-ED45-469E-A61D-970EC583CAB4}"
+}
+struct ID3D12CommandSignature extends ID3D12Pageable {
+    static IID := "{C36A797C-EC80-4F0A-8985-A7B2475082D1}"
+}
+struct ID3D12CommandList extends ID3D12DeviceChild {
+    static IID := "{7116D91C-E7E4-47CE-B8C6-EC8168F437E5}"
+    GetType()
+      => ComCall(8, this.p, D3D12_COMMAND_LIST_TYPE)
+}
+struct ID3D12GraphicsCommandList extends ID3D12CommandList {
+    static IID := "{5B160D0F-AC1B-4185-8BA8-B3AE42A5A455}"
+    Close()
+      => ComCall(9, this.p)
+    Reset(pAllocator, pInitialState?)
+      => ComCall(10, this.p, ID3D12CommandAllocator, pAllocator, ID3D12PipelineState, pInitialState?)
+    ClearState(pPipelineState?)
+      => ComCall(11, this.p, ID3D12PipelineState, pPipelineState?, "void")
+    DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation, StartInstanceLocation)
+      => ComCall(12, this.p, UInt32, VertexCountPerInstance, UInt32, InstanceCount, UInt32, StartVertexLocation, UInt32, StartInstanceLocation, "void")
+    DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation)
+      => ComCall(13, this.p, UInt32, IndexCountPerInstance, UInt32, InstanceCount, UInt32, StartIndexLocation, Int32, BaseVertexLocation, UInt32, StartInstanceLocation, "void")
+    Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ)
+      => ComCall(14, this.p, UInt32, ThreadGroupCountX, UInt32, ThreadGroupCountY, UInt32, ThreadGroupCountZ, "void")
+    CopyBufferRegion(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, NumBytes)
+      => ComCall(15, this.p, ID3D12Resource, pDstBuffer, Int64, DstOffset, ID3D12Resource, pSrcBuffer, Int64, SrcOffset, Int64, NumBytes, "void")
+    CopyTextureRegion(pDst, DstX, DstY, DstZ, pSrc, pSrcBox?)
+      => ComCall(16, this.p, D3D12_TEXTURE_COPY_LOCATION.Ptr, pDst, UInt32, DstX, UInt32, DstY, UInt32, DstZ, D3D12_TEXTURE_COPY_LOCATION.Ptr, pSrc, D3D12_BOX.Ptr, pSrcBox?, "void")
+    CopyResource(pDstResource, pSrcResource)
+      => ComCall(17, this.p, ID3D12Resource, pDstResource, ID3D12Resource, pSrcResource, "void")
+    CopyTiles(pTiledResource, pTileRegionStartCoordinate, pTileRegionSize, pBuffer, BufferStartOffsetInBytes, Flags)
+      => ComCall(18, this.p, ID3D12Resource, pTiledResource, D3D12_TILED_RESOURCE_COORDINATE.Ptr, pTileRegionStartCoordinate, D3D12_TILE_REGION_SIZE.Ptr, pTileRegionSize, ID3D12Resource, pBuffer, Int64, BufferStartOffsetInBytes, D3D12_TILE_COPY_FLAGS, Flags, "void")
+    ResolveSubresource(pDstResource, DstSubresource, pSrcResource, SrcSubresource, Format)
+      => ComCall(19, this.p, ID3D12Resource, pDstResource, UInt32, DstSubresource, ID3D12Resource, pSrcResource, UInt32, SrcSubresource, DXGI_FORMAT, Format, "void")
+    IASetPrimitiveTopology(PrimitiveTopology)
+      => ComCall(20, this.p, D3D_PRIMITIVE_TOPOLOGY, PrimitiveTopology, "void")
+    RSSetViewports(pViewports)
+      => ComCall(21, this.p, UInt32, pViewports.Length, D3D12_VIEWPORT.Ptr, pViewports, "void")
+    RSSetScissorRects(pRects)
+      => ComCall(22, this.p, UInt32, pRects.Length, RECT.Ptr, pRects, "void")
+    OMSetBlendFactor(BlendFactor?)
+      => ComCall(23, this.p, Float32.Ptr, BlendFactor?, "void")
+    OMSetStencilRef(StencilRef)
+      => ComCall(24, this.p, UInt32, StencilRef, "void")
+    SetPipelineState(pPipelineState)
+      => ComCall(25, this.p, ID3D12PipelineState, pPipelineState, "void")
+    ResourceBarrier(pBarriers)
+      => ComCall(26, this.p, UInt32, pBarriers.Length, D3D12_RESOURCE_BARRIER.Ptr, pBarriers, "void")
+    ExecuteBundle(pCommandList)
+      => ComCall(27, this.p, ID3D12GraphicsCommandList, pCommandList, "void")
+    SetDescriptorHeaps(ppDescriptorHeaps)
+      => ComCall(28, this.p, UInt32, ppDescriptorHeaps.Length, ID3D12DescriptorHeap.Ptr, ppDescriptorHeaps, "void")
+    SetComputeRootSignature(pRootSignature?)
+      => ComCall(29, this.p, ID3D12RootSignature, pRootSignature?, "void")
+    SetGraphicsRootSignature(pRootSignature?)
+      => ComCall(30, this.p, ID3D12RootSignature, pRootSignature?, "void")
+    SetComputeRootDescriptorTable(RootParameterIndex, BaseDescriptor)
+      => ComCall(31, this.p, UInt32, RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE, BaseDescriptor, "void")
+    SetGraphicsRootDescriptorTable(RootParameterIndex, BaseDescriptor)
+      => ComCall(32, this.p, UInt32, RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE, BaseDescriptor, "void")
+    SetComputeRoot32BitConstant(RootParameterIndex, SrcData, DestOffsetIn32BitValues)
+      => ComCall(33, this.p, UInt32, RootParameterIndex, UInt32, SrcData, UInt32, DestOffsetIn32BitValues, "void")
+    SetGraphicsRoot32BitConstant(RootParameterIndex, SrcData, DestOffsetIn32BitValues)
+      => ComCall(34, this.p, UInt32, RootParameterIndex, UInt32, SrcData, UInt32, DestOffsetIn32BitValues, "void")
+    SetComputeRoot32BitConstants(RootParameterIndex, Num32BitValuesToSet, pSrcData, DestOffsetIn32BitValues)
+      => ComCall(35, this.p, UInt32, RootParameterIndex, UInt32, Num32BitValuesToSet, Struct.Ptr, pSrcData, UInt32, DestOffsetIn32BitValues, "void")
+    SetGraphicsRoot32BitConstants(RootParameterIndex, Num32BitValuesToSet, pSrcData, DestOffsetIn32BitValues)
+      => ComCall(36, this.p, UInt32, RootParameterIndex, UInt32, Num32BitValuesToSet, Struct.Ptr, pSrcData, UInt32, DestOffsetIn32BitValues, "void")
+    SetComputeRootConstantBufferView(RootParameterIndex, BufferLocation)
+      => ComCall(37, this.p, UInt32, RootParameterIndex, Int64, BufferLocation, "void")
+    SetGraphicsRootConstantBufferView(RootParameterIndex, BufferLocation)
+      => ComCall(38, this.p, UInt32, RootParameterIndex, Int64, BufferLocation, "void")
+    SetComputeRootShaderResourceView(RootParameterIndex, BufferLocation)
+      => ComCall(39, this.p, UInt32, RootParameterIndex, Int64, BufferLocation, "void")
+    SetGraphicsRootShaderResourceView(RootParameterIndex, BufferLocation)
+      => ComCall(40, this.p, UInt32, RootParameterIndex, Int64, BufferLocation, "void")
+    SetComputeRootUnorderedAccessView(RootParameterIndex, BufferLocation)
+      => ComCall(41, this.p, UInt32, RootParameterIndex, Int64, BufferLocation, "void")
+    SetGraphicsRootUnorderedAccessView(RootParameterIndex, BufferLocation)
+      => ComCall(42, this.p, UInt32, RootParameterIndex, Int64, BufferLocation, "void")
+    IASetIndexBuffer(pView?)
+      => ComCall(43, this.p, D3D12_INDEX_BUFFER_VIEW.Ptr, pView?, "void")
+    IASetVertexBuffers(StartSlot, pViews?)
+      => ComCall(44, this.p, UInt32, StartSlot, UInt32, pViews?.Length ?? 0, D3D12_VERTEX_BUFFER_VIEW.Ptr, pViews?, "void")
+    SOSetTargets(StartSlot, pViews?)
+      => ComCall(45, this.p, UInt32, StartSlot, UInt32, pViews?.Length ?? 0, D3D12_STREAM_OUTPUT_BUFFER_VIEW.Ptr, pViews?, "void")
+    OMSetRenderTargets(NumRenderTargetDescriptors, pRenderTargetDescriptors?, RTsSingleHandleToDescriptorRange, pDepthStencilDescriptor?)
+      => ComCall(46, this.p, UInt32, NumRenderTargetDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE.Ptr, pRenderTargetDescriptors?, BOOL, RTsSingleHandleToDescriptorRange, D3D12_CPU_DESCRIPTOR_HANDLE.Ptr, pDepthStencilDescriptor?, "void")
+    ClearDepthStencilView(DepthStencilView, ClearFlags, Depth, Stencil, pRects?)
+      => ComCall(47, this.p, D3D12_CPU_DESCRIPTOR_HANDLE, DepthStencilView, D3D12_CLEAR_FLAGS, ClearFlags, Float32, Depth, UInt8, Stencil, UInt32, pRects?.Length ?? 0, RECT.Ptr, pRects?, "void")
+    ClearRenderTargetView(RenderTargetView, ColorRGBA, pRects?)
+      => ComCall(48, this.p, D3D12_CPU_DESCRIPTOR_HANDLE, RenderTargetView, Float32.Ptr, ColorRGBA, UInt32, pRects?.Length ?? 0, RECT.Ptr, pRects?, "void")
+    ClearUnorderedAccessViewUint(ViewGPUHandleInCurrentHeap, ViewCPUHandle, pResource, Values, pRects)
+      => ComCall(49, this.p, D3D12_GPU_DESCRIPTOR_HANDLE, ViewGPUHandleInCurrentHeap, D3D12_CPU_DESCRIPTOR_HANDLE, ViewCPUHandle, ID3D12Resource, pResource, UInt32.Ptr, Values, UInt32, pRects.Length, RECT.Ptr, pRects, "void")
+    ClearUnorderedAccessViewFloat(ViewGPUHandleInCurrentHeap, ViewCPUHandle, pResource, Values, pRects)
+      => ComCall(50, this.p, D3D12_GPU_DESCRIPTOR_HANDLE, ViewGPUHandleInCurrentHeap, D3D12_CPU_DESCRIPTOR_HANDLE, ViewCPUHandle, ID3D12Resource, pResource, Float32.Ptr, Values, UInt32, pRects.Length, RECT.Ptr, pRects, "void")
+    DiscardResource(pResource, pRegion?)
+      => ComCall(51, this.p, ID3D12Resource, pResource, D3D12_DISCARD_REGION.Ptr, pRegion?, "void")
+    BeginQuery(pQueryHeap, Type, Index)
+      => ComCall(52, this.p, ID3D12QueryHeap, pQueryHeap, D3D12_QUERY_TYPE, Type, UInt32, Index, "void")
+    EndQuery(pQueryHeap, Type, Index)
+      => ComCall(53, this.p, ID3D12QueryHeap, pQueryHeap, D3D12_QUERY_TYPE, Type, UInt32, Index, "void")
+    ResolveQueryData(pQueryHeap, Type, StartIndex, NumQueries, pDestinationBuffer, AlignedDestinationBufferOffset)
+      => ComCall(54, this.p, ID3D12QueryHeap, pQueryHeap, D3D12_QUERY_TYPE, Type, UInt32, StartIndex, UInt32, NumQueries, ID3D12Resource, pDestinationBuffer, Int64, AlignedDestinationBufferOffset, "void")
+    SetPredication(pBuffer?, AlignedBufferOffset, Operation)
+      => ComCall(55, this.p, ID3D12Resource, pBuffer?, Int64, AlignedBufferOffset, D3D12_PREDICATION_OP, Operation, "void")
+    SetMarker(Metadata, pData?)
+      => ComCall(56, this.p, UInt32, Metadata, Struct.Ptr, pData?, UInt32, pData?.Size ?? 0, "void")
+    BeginEvent(Metadata, pData?)
+      => ComCall(57, this.p, UInt32, Metadata, Struct.Ptr, pData?, UInt32, pData?.Size ?? 0, "void")
+    EndEvent()
+      => ComCall(58, this.p, "void")
+    ExecuteIndirect(pCommandSignature, MaxCommandCount, pArgumentBuffer, ArgumentBufferOffset, pCountBuffer?, CountBufferOffset)
+      => ComCall(59, this.p, ID3D12CommandSignature, pCommandSignature, UInt32, MaxCommandCount, ID3D12Resource, pArgumentBuffer, Int64, ArgumentBufferOffset, ID3D12Resource, pCountBuffer?, Int64, CountBufferOffset, "void")
+}
+struct ID3D12GraphicsCommandList1 extends ID3D12GraphicsCommandList {
+    static IID := "{553103FB-1FE7-4557-BB38-946D7D0E7CA7}"
+    AtomicCopyBufferUINT(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, ppDependentResources, pDependentSubresourceRanges)
+      => ComCall(60, this.p, ID3D12Resource, pDstBuffer, Int64, DstOffset, ID3D12Resource, pSrcBuffer, Int64, SrcOffset, UInt32, pDependentSubresourceRanges.Length, ID3D12Resource.Ptr, ppDependentResources, D3D12_SUBRESOURCE_RANGE_UINT64.Ptr, pDependentSubresourceRanges, "void")
+    AtomicCopyBufferUINT64(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, ppDependentResources, pDependentSubresourceRanges)
+      => ComCall(61, this.p, ID3D12Resource, pDstBuffer, Int64, DstOffset, ID3D12Resource, pSrcBuffer, Int64, SrcOffset, UInt32, pDependentSubresourceRanges.Length, ID3D12Resource.Ptr, ppDependentResources, D3D12_SUBRESOURCE_RANGE_UINT64.Ptr, pDependentSubresourceRanges, "void")
+    OMSetDepthBounds(Min, Max)
+      => ComCall(62, this.p, Float32, Min, Float32, Max, "void")
+    SetSamplePositions(NumSamplesPerPixel, NumPixels, pSamplePositions)
+      => ComCall(63, this.p, UInt32, NumSamplesPerPixel, UInt32, NumPixels, D3D12_SAMPLE_POSITION.Ptr, pSamplePositions, "void")
+    ResolveSubresourceRegion(pDstResource, DstSubresource, DstX, DstY, pSrcResource, SrcSubresource, pSrcRect?, Format, ResolveMode)
+      => ComCall(64, this.p, ID3D12Resource, pDstResource, UInt32, DstSubresource, UInt32, DstX, UInt32, DstY, ID3D12Resource, pSrcResource, UInt32, SrcSubresource, RECT.Ptr, pSrcRect?, DXGI_FORMAT, Format, D3D12_RESOLVE_MODE, ResolveMode, "void")
+    SetViewInstanceMask(Mask)
+      => ComCall(65, this.p, UInt32, Mask, "void")
+}
+struct D3D12_WRITEBUFFERIMMEDIATE_PARAMETER {
+    Dest : Int64
+    Value : UInt32
+}
+struct D3D12_WRITEBUFFERIMMEDIATE_MODE extends Int32 {
+    static D3D12_WRITEBUFFERIMMEDIATE_MODE_DEFAULT := 0
+    static D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN := 1
+    static D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_OUT := 2
+}
+struct ID3D12GraphicsCommandList2 extends ID3D12GraphicsCommandList1 {
+    static IID := "{38C3E585-FF17-412C-9150-4FC6F9D72A28}"
+    WriteBufferImmediate(pParams, pModes?)
+      => ComCall(66, this.p, UInt32, pModes?.Length ?? 0, D3D12_WRITEBUFFERIMMEDIATE_PARAMETER.Ptr, pParams, D3D12_WRITEBUFFERIMMEDIATE_MODE.Ptr, pModes?, "void")
+}
+struct ID3D12CommandQueue extends ID3D12Pageable {
+    static IID := "{0EC870A6-5D7E-4C22-8CFC-5BAAE07616ED}"
+    UpdateTileMappings(pResource, pResourceRegionStartCoordinates?, pResourceRegionSizes?, pHeap?, pRangeFlags?, pHeapRangeStartOffsets?, pRangeTileCounts?, Flags)
+      => ComCall(8, this.p, ID3D12Resource, pResource, UInt32, pResourceRegionSizes?.Length ?? 0, D3D12_TILED_RESOURCE_COORDINATE.Ptr, pResourceRegionStartCoordinates?, D3D12_TILE_REGION_SIZE.Ptr, pResourceRegionSizes?, ID3D12Heap, pHeap?, UInt32, pRangeTileCounts?.Length ?? 0, D3D12_TILE_RANGE_FLAGS.Ptr, pRangeFlags?, UInt32.Ptr, pHeapRangeStartOffsets?, UInt32.Ptr, pRangeTileCounts?, D3D12_TILE_MAPPING_FLAGS, Flags, "void")
+    CopyTileMappings(pDstResource, pDstRegionStartCoordinate, pSrcResource, pSrcRegionStartCoordinate, pRegionSize, Flags)
+      => ComCall(9, this.p, ID3D12Resource, pDstResource, D3D12_TILED_RESOURCE_COORDINATE.Ptr, pDstRegionStartCoordinate, ID3D12Resource, pSrcResource, D3D12_TILED_RESOURCE_COORDINATE.Ptr, pSrcRegionStartCoordinate, D3D12_TILE_REGION_SIZE.Ptr, pRegionSize, D3D12_TILE_MAPPING_FLAGS, Flags, "void")
+    ExecuteCommandLists(ppCommandLists)
+      => ComCall(10, this.p, UInt32, ppCommandLists.Length, ID3D12CommandList.Ptr, ppCommandLists, "void")
+    SetMarker(Metadata, pData?)
+      => ComCall(11, this.p, UInt32, Metadata, Struct.Ptr, pData?, UInt32, pData?.Size ?? 0, "void")
+    BeginEvent(Metadata, pData?)
+      => ComCall(12, this.p, UInt32, Metadata, Struct.Ptr, pData?, UInt32, pData?.Size ?? 0, "void")
+    EndEvent()
+      => ComCall(13, this.p, "void")
+    Signal(pFence, Value)
+      => ComCall(14, this.p, ID3D12Fence, pFence, Int64, Value)
+    Wait(pFence, Value)
+      => ComCall(15, this.p, ID3D12Fence, pFence, Int64, Value)
+    GetTimestampFrequency(pFrequency)
+      => ComCall(16, this.p, Int64.Ptr, pFrequency)
+    GetClockCalibration(pGpuTimestamp, pCpuTimestamp)
+      => ComCall(17, this.p, Int64.Ptr, pGpuTimestamp, Int64.Ptr, pCpuTimestamp)
+    GetDesc()
+      => ComCall(18, this.p, D3D12_COMMAND_QUEUE_DESC)
+}
+struct D3D12_FEATURE_DATA_HARDWARE_SCHEDULING_QUEUE_GROUPINGS {
+    ComputeQueuesPer3DQueue : UInt32
+}
+struct D3D12_COMMAND_QUEUE_PROCESS_PRIORITY extends Int32 {
+    static D3D12_COMMAND_QUEUE_PROCESS_PRIORITY_NORMAL := 0
+    static D3D12_COMMAND_QUEUE_PROCESS_PRIORITY_HIGH := 1
+}
+struct D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY extends Int32 {
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_IDLE := 0
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_DEFAULT := 1
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_NORMAL_0 := 2
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_0 := 18
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_1 := 19
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_2 := 20
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_3 := 21
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_4 := 22
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_5 := 23
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_6 := 24
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_7 := 25
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_8 := 26
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_9 := 27
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_10 := 28
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_11 := 29
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_12 := 30
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_SOFT_REALTIME_13 := 31
+    static D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY_HARD_REALTIME := 32
+}
+struct ID3D12CommandQueue1 extends ID3D12CommandQueue {
+    static IID := "{3A3C3165-0EE7-4B8E-A0AF-6356B4C3BBB9}"
+    SetProcessPriority(Priority)
+      => ComCall(19, this.p, D3D12_COMMAND_QUEUE_PROCESS_PRIORITY, Priority)
+    GetProcessPriority(pOutValue)
+      => ComCall(20, this.p, D3D12_COMMAND_QUEUE_PROCESS_PRIORITY.Ptr, pOutValue)
+    SetGlobalPriority(Priority)
+      => ComCall(21, this.p, D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY, Priority)
+    GetGlobalPriority(pOutValue)
+      => ComCall(22, this.p, D3D12_COMMAND_QUEUE_GLOBAL_PRIORITY.Ptr, pOutValue)
+}
+struct ID3D12Device extends ID3D12Object {
+    static IID := "{189819F1-1DB6-4B57-BE54-1821339B85F7}"
+    GetNodeCount()
+      => ComCall(7, this.p, UInt32)
+    CreateCommandQueue(pDesc, riid, ppCommandQueue)
+      => ComCall(8, this.p, D3D12_COMMAND_QUEUE_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCommandQueue)
+    CreateCommandAllocator(type, riid, ppCommandAllocator)
+      => ComCall(9, this.p, D3D12_COMMAND_LIST_TYPE, type, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCommandAllocator)
+    CreateGraphicsPipelineState(pDesc, riid, ppPipelineState)
+      => ComCall(10, this.p, D3D12_GRAPHICS_PIPELINE_STATE_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppPipelineState)
+    CreateComputePipelineState(pDesc, riid, ppPipelineState)
+      => ComCall(11, this.p, D3D12_COMPUTE_PIPELINE_STATE_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppPipelineState)
+    CreateCommandList(nodeMask, type, pCommandAllocator, pInitialState?, riid, ppCommandList)
+      => ComCall(12, this.p, UInt32, nodeMask, D3D12_COMMAND_LIST_TYPE, type, ID3D12CommandAllocator, pCommandAllocator, ID3D12PipelineState, pInitialState?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCommandList)
+    CheckFeatureSupport(Feature, pFeatureSupportData)
+      => ComCall(13, this.p, D3D12_FEATURE, Feature, Struct.Ptr, pFeatureSupportData, UInt32, pFeatureSupportData.Size)
+    CreateDescriptorHeap(pDescriptorHeapDesc, riid, ppvHeap)
+      => ComCall(14, this.p, D3D12_DESCRIPTOR_HEAP_DESC.Ptr, pDescriptorHeapDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvHeap)
+    GetDescriptorHandleIncrementSize(DescriptorHeapType)
+      => ComCall(15, this.p, D3D12_DESCRIPTOR_HEAP_TYPE, DescriptorHeapType, UInt32)
+    CreateRootSignature(nodeMask, pBlobWithRootSignature, riid, ppvRootSignature)
+      => ComCall(16, this.p, UInt32, nodeMask, Struct.Ptr, pBlobWithRootSignature, IntPtr, pBlobWithRootSignature.Length, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvRootSignature)
+    CreateConstantBufferView(pDesc?, DestDescriptor)
+      => ComCall(17, this.p, D3D12_CONSTANT_BUFFER_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor, "void")
+    CreateShaderResourceView(pResource?, pDesc?, DestDescriptor)
+      => ComCall(18, this.p, ID3D12Resource, pResource?, D3D12_SHADER_RESOURCE_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor, "void")
+    CreateUnorderedAccessView(pResource?, pCounterResource?, pDesc?, DestDescriptor)
+      => ComCall(19, this.p, ID3D12Resource, pResource?, ID3D12Resource, pCounterResource?, D3D12_UNORDERED_ACCESS_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor, "void")
+    CreateRenderTargetView(pResource?, pDesc?, DestDescriptor)
+      => ComCall(20, this.p, ID3D12Resource, pResource?, D3D12_RENDER_TARGET_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor, "void")
+    CreateDepthStencilView(pResource?, pDesc?, DestDescriptor)
+      => ComCall(21, this.p, ID3D12Resource, pResource?, D3D12_DEPTH_STENCIL_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor, "void")
+    CreateSampler(pDesc, DestDescriptor)
+      => ComCall(22, this.p, D3D12_SAMPLER_DESC.Ptr, pDesc, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor, "void")
+    CopyDescriptors(pDestDescriptorRangeStarts, pDestDescriptorRangeSizes?, pSrcDescriptorRangeStarts, pSrcDescriptorRangeSizes?, DescriptorHeapsType)
+      => ComCall(23, this.p, UInt32, pDestDescriptorRangeSizes?.Length ?? 0, D3D12_CPU_DESCRIPTOR_HANDLE.Ptr, pDestDescriptorRangeStarts, UInt32.Ptr, pDestDescriptorRangeSizes?, UInt32, pSrcDescriptorRangeSizes?.Length ?? 0, D3D12_CPU_DESCRIPTOR_HANDLE.Ptr, pSrcDescriptorRangeStarts, UInt32.Ptr, pSrcDescriptorRangeSizes?, D3D12_DESCRIPTOR_HEAP_TYPE, DescriptorHeapsType, "void")
+    CopyDescriptorsSimple(NumDescriptors, DestDescriptorRangeStart, SrcDescriptorRangeStart, DescriptorHeapsType)
+      => ComCall(24, this.p, UInt32, NumDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptorRangeStart, D3D12_CPU_DESCRIPTOR_HANDLE, SrcDescriptorRangeStart, D3D12_DESCRIPTOR_HEAP_TYPE, DescriptorHeapsType, "void")
+    GetResourceAllocationInfo(visibleMask, pResourceDescs)
+      => ComCall(25, this.p, UInt32, visibleMask, UInt32, pResourceDescs.Length, D3D12_RESOURCE_DESC.Ptr, pResourceDescs, D3D12_RESOURCE_ALLOCATION_INFO)
+    GetCustomHeapProperties(nodeMask, heapType)
+      => ComCall(26, this.p, UInt32, nodeMask, D3D12_HEAP_TYPE, heapType, D3D12_HEAP_PROPERTIES)
+    CreateCommittedResource(pHeapProperties, HeapFlags, pDesc, InitialResourceState, pOptimizedClearValue?, riidResource, ppvResource?)
+      => ComCall(27, this.p, D3D12_HEAP_PROPERTIES.Ptr, pHeapProperties, D3D12_HEAP_FLAGS, HeapFlags, D3D12_RESOURCE_DESC.Ptr, pDesc, D3D12_RESOURCE_STATES, InitialResourceState, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, GUID.Ptr, riidResource, Struct.Ptr.Ptr, ppvResource?)
+    CreateHeap(pDesc, riid, ppvHeap?)
+      => ComCall(28, this.p, D3D12_HEAP_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvHeap?)
+    CreatePlacedResource(pHeap, HeapOffset, pDesc, InitialState, pOptimizedClearValue?, riid, ppvResource?)
+      => ComCall(29, this.p, ID3D12Heap, pHeap, Int64, HeapOffset, D3D12_RESOURCE_DESC.Ptr, pDesc, D3D12_RESOURCE_STATES, InitialState, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvResource?)
+    CreateReservedResource(pDesc, InitialState, pOptimizedClearValue?, riid, ppvResource?)
+      => ComCall(30, this.p, D3D12_RESOURCE_DESC.Ptr, pDesc, D3D12_RESOURCE_STATES, InitialState, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvResource?)
+    CreateSharedHandle(pObject, pAttributes?, Access, Name?, pHandle)
+      => ComCall(31, this.p, ID3D12DeviceChild, pObject, SECURITY_ATTRIBUTES.Ptr, pAttributes?, UInt32, Access, "Str", Name?, HANDLE.Ptr, pHandle)
+    OpenSharedHandle(NTHandle, riid, ppvObj?)
+      => ComCall(32, this.p, HANDLE, NTHandle, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvObj?)
+    OpenSharedHandleByName(Name, Access, pNTHandle)
+      => ComCall(33, this.p, "Str", Name, UInt32, Access, HANDLE.Ptr, pNTHandle)
+    MakeResident(ppObjects)
+      => ComCall(34, this.p, UInt32, ppObjects.Length, ID3D12Pageable.Ptr, ppObjects)
+    Evict(ppObjects)
+      => ComCall(35, this.p, UInt32, ppObjects.Length, ID3D12Pageable.Ptr, ppObjects)
+    CreateFence(InitialValue, Flags, riid, ppFence)
+      => ComCall(36, this.p, Int64, InitialValue, D3D12_FENCE_FLAGS, Flags, GUID.Ptr, riid, Struct.Ptr.Ptr, ppFence)
+    GetDeviceRemovedReason()
+      => ComCall(37, this.p)
+    GetCopyableFootprints(pResourceDesc, FirstSubresource, BaseOffset, pLayouts?, pNumRows?, pRowSizeInBytes?, pTotalBytes?)
+      => ComCall(38, this.p, D3D12_RESOURCE_DESC.Ptr, pResourceDesc, UInt32, FirstSubresource, UInt32, pRowSizeInBytes?.Length ?? 0, Int64, BaseOffset, D3D12_PLACED_SUBRESOURCE_FOOTPRINT.Ptr, pLayouts?, UInt32.Ptr, pNumRows?, Int64.Ptr, pRowSizeInBytes?, Int64.Ptr, pTotalBytes?, "void")
+    CreateQueryHeap(pDesc, riid, ppvHeap?)
+      => ComCall(39, this.p, D3D12_QUERY_HEAP_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvHeap?)
+    SetStablePowerState(Enable)
+      => ComCall(40, this.p, BOOL, Enable)
+    CreateCommandSignature(pDesc, pRootSignature?, riid, ppvCommandSignature?)
+      => ComCall(41, this.p, D3D12_COMMAND_SIGNATURE_DESC.Ptr, pDesc, ID3D12RootSignature, pRootSignature?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvCommandSignature?)
+    GetResourceTiling(pTiledResource, pNumTilesForEntireResource?, pPackedMipDesc?, pStandardTileShapeForNonPackedMips?, FirstSubresourceTilingToGet, pSubresourceTilingsForNonPackedMips)
+      => ComCall(42, this.p, ID3D12Resource, pTiledResource, UInt32.Ptr, pNumTilesForEntireResource?, D3D12_PACKED_MIP_INFO.Ptr, pPackedMipDesc?, D3D12_TILE_SHAPE.Ptr, pStandardTileShapeForNonPackedMips?, UInt32.Ptr, pSubresourceTilingsForNonPackedMips.Length, UInt32, FirstSubresourceTilingToGet, D3D12_SUBRESOURCE_TILING.Ptr, pSubresourceTilingsForNonPackedMips, "void")
+    GetAdapterLuid()
+      => ComCall(43, this.p, LUID)
+}
+struct ID3D12PipelineLibrary extends ID3D12DeviceChild {
+    static IID := "{C64226A8-9201-46AF-B4CC-53FB9FF7414F}"
+    StorePipeline(pName?, pPipeline)
+      => ComCall(8, this.p, "Str", pName?, ID3D12PipelineState, pPipeline)
+    LoadGraphicsPipeline(pName, pDesc, riid, ppPipelineState)
+      => ComCall(9, this.p, "Str", pName, D3D12_GRAPHICS_PIPELINE_STATE_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppPipelineState)
+    LoadComputePipeline(pName, pDesc, riid, ppPipelineState)
+      => ComCall(10, this.p, "Str", pName, D3D12_COMPUTE_PIPELINE_STATE_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppPipelineState)
+    GetSerializedSize()
+      => ComCall(11, this.p, IntPtr)
+    Serialize(pData)
+      => ComCall(12, this.p, Struct.Ptr, pData, IntPtr, pData.Length)
+}
+struct ID3D12PipelineLibrary1 extends ID3D12PipelineLibrary {
+    static IID := "{80EABF42-2568-4E5E-BD82-C37F86961DC3}"
+    LoadPipeline(pName, pDesc, riid, ppPipelineState)
+      => ComCall(13, this.p, "Str", pName, D3D12_PIPELINE_STATE_STREAM_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppPipelineState)
+}
+struct D3D12_MULTIPLE_FENCE_WAIT_FLAGS extends Int32 {
+    static D3D12_MULTIPLE_FENCE_WAIT_FLAG_NONE := 0
+    static D3D12_MULTIPLE_FENCE_WAIT_FLAG_ANY := 1
+    static D3D12_MULTIPLE_FENCE_WAIT_FLAG_ALL := 0
+}
+struct D3D12_RESIDENCY_PRIORITY extends Int32 {
+    static D3D12_RESIDENCY_PRIORITY_MINIMUM := 671088640
+    static D3D12_RESIDENCY_PRIORITY_LOW := 1342177280
+    static D3D12_RESIDENCY_PRIORITY_NORMAL := 2013265920
+    static D3D12_RESIDENCY_PRIORITY_HIGH := -1610547200
+    static D3D12_RESIDENCY_PRIORITY_MAXIMUM := -939524096
+}
+struct ID3D12Device1 extends ID3D12Device {
+    static IID := "{77ACCE80-638E-4E65-8895-C1F23386863E}"
+    CreatePipelineLibrary(pLibraryBlob, riid, ppPipelineLibrary)
+      => ComCall(44, this.p, Struct.Ptr, pLibraryBlob, IntPtr, pLibraryBlob.Length, GUID.Ptr, riid, Struct.Ptr.Ptr, ppPipelineLibrary)
+    SetEventOnMultipleFenceCompletion(ppFences, pFenceValues, Flags, hEvent)
+      => ComCall(45, this.p, ID3D12Fence.Ptr, ppFences, Int64.Ptr, pFenceValues, UInt32, pFenceValues.Length, D3D12_MULTIPLE_FENCE_WAIT_FLAGS, Flags, HANDLE, hEvent)
+    SetResidencyPriority(ppObjects, pPriorities)
+      => ComCall(46, this.p, UInt32, pPriorities.Length, ID3D12Pageable.Ptr, ppObjects, D3D12_RESIDENCY_PRIORITY.Ptr, pPriorities)
+}
+struct ID3D12Device2 extends ID3D12Device1 {
+    static IID := "{30BAA41E-B15B-475C-A0BB-1AF5C5B64328}"
+    CreatePipelineState(pDesc, riid, ppPipelineState)
+      => ComCall(47, this.p, D3D12_PIPELINE_STATE_STREAM_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppPipelineState)
+}
+struct D3D12_RESIDENCY_FLAGS extends Int32 {
+    static D3D12_RESIDENCY_FLAG_NONE := 0
+    static D3D12_RESIDENCY_FLAG_DENY_OVERBUDGET := 1
+}
+struct ID3D12Device3 extends ID3D12Device2 {
+    static IID := "{81DADC15-2BAD-4392-93C5-101345C4AA98}"
+    OpenExistingHeapFromAddress(pAddress, riid, ppvHeap)
+      => ComCall(48, this.p, Struct.Ptr, pAddress, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvHeap)
+    OpenExistingHeapFromFileMapping(hFileMapping, riid, ppvHeap)
+      => ComCall(49, this.p, HANDLE, hFileMapping, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvHeap)
+    EnqueueMakeResident(Flags, ppObjects, pFenceToSignal, FenceValueToSignal)
+      => ComCall(50, this.p, D3D12_RESIDENCY_FLAGS, Flags, UInt32, ppObjects.Length, ID3D12Pageable.Ptr, ppObjects, ID3D12Fence, pFenceToSignal, Int64, FenceValueToSignal)
+}
+struct D3D12_COMMAND_LIST_FLAGS extends Int32 {
+    static D3D12_COMMAND_LIST_FLAG_NONE := 0
+}
+struct D3D12_COMMAND_POOL_FLAGS extends Int32 {
+    static D3D12_COMMAND_POOL_FLAG_NONE := 0
+}
+struct D3D12_COMMAND_RECORDER_FLAGS extends Int32 {
+    static D3D12_COMMAND_RECORDER_FLAG_NONE := 0
+}
+struct D3D12_PROTECTED_SESSION_STATUS extends Int32 {
+    static D3D12_PROTECTED_SESSION_STATUS_OK := 0
+    static D3D12_PROTECTED_SESSION_STATUS_INVALID := 1
+}
+struct ID3D12ProtectedSession extends ID3D12DeviceChild {
+    static IID := "{A1533D18-0AC1-4084-85B9-89A96116806B}"
+    GetStatusFence(riid, ppFence?)
+      => ComCall(8, this.p, GUID.Ptr, riid, Struct.Ptr.Ptr, ppFence?)
+    GetSessionStatus()
+      => ComCall(9, this.p, D3D12_PROTECTED_SESSION_STATUS)
+}
+struct D3D12_PROTECTED_RESOURCE_SESSION_SUPPORT_FLAGS extends Int32 {
+    static D3D12_PROTECTED_RESOURCE_SESSION_SUPPORT_FLAG_NONE := 0
+    static D3D12_PROTECTED_RESOURCE_SESSION_SUPPORT_FLAG_SUPPORTED := 1
+}
+struct D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT {
+    NodeIndex : UInt32
+    Support : D3D12_PROTECTED_RESOURCE_SESSION_SUPPORT_FLAGS
+}
+struct D3D12_PROTECTED_RESOURCE_SESSION_FLAGS extends Int32 {
+    static D3D12_PROTECTED_RESOURCE_SESSION_FLAG_NONE := 0
+}
+struct D3D12_PROTECTED_RESOURCE_SESSION_DESC {
+    NodeMask : UInt32
+    Flags : D3D12_PROTECTED_RESOURCE_SESSION_FLAGS
+}
+struct ID3D12ProtectedResourceSession extends ID3D12ProtectedSession {
+    static IID := "{6CD696F4-F289-40CC-8091-5A6C0A099C3D}"
+    GetDesc()
+      => ComCall(10, this.p, D3D12_PROTECTED_RESOURCE_SESSION_DESC)
+}
+struct ID3D12Device4 extends ID3D12Device3 {
+    static IID := "{E865DF17-A9EE-46F9-A463-3098315AA2E5}"
+    CreateCommandList1(nodeMask, type, flags, riid, ppCommandList)
+      => ComCall(51, this.p, UInt32, nodeMask, D3D12_COMMAND_LIST_TYPE, type, D3D12_COMMAND_LIST_FLAGS, flags, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCommandList)
+    CreateProtectedResourceSession(pDesc, riid, ppSession)
+      => ComCall(52, this.p, D3D12_PROTECTED_RESOURCE_SESSION_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppSession)
+    CreateCommittedResource1(pHeapProperties, HeapFlags, pDesc, InitialResourceState, pOptimizedClearValue?, pProtectedSession?, riidResource, ppvResource?)
+      => ComCall(53, this.p, D3D12_HEAP_PROPERTIES.Ptr, pHeapProperties, D3D12_HEAP_FLAGS, HeapFlags, D3D12_RESOURCE_DESC.Ptr, pDesc, D3D12_RESOURCE_STATES, InitialResourceState, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, ID3D12ProtectedResourceSession, pProtectedSession?, GUID.Ptr, riidResource, Struct.Ptr.Ptr, ppvResource?)
+    CreateHeap1(pDesc, pProtectedSession?, riid, ppvHeap?)
+      => ComCall(54, this.p, D3D12_HEAP_DESC.Ptr, pDesc, ID3D12ProtectedResourceSession, pProtectedSession?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvHeap?)
+    CreateReservedResource1(pDesc, InitialState, pOptimizedClearValue?, pProtectedSession?, riid, ppvResource?)
+      => ComCall(55, this.p, D3D12_RESOURCE_DESC.Ptr, pDesc, D3D12_RESOURCE_STATES, InitialState, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, ID3D12ProtectedResourceSession, pProtectedSession?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvResource?)
+    GetResourceAllocationInfo1(visibleMask, pResourceDescs, pResourceAllocationInfo1?)
+      => ComCall(56, this.p, UInt32, visibleMask, UInt32, pResourceAllocationInfo1?.Length ?? 0, D3D12_RESOURCE_DESC.Ptr, pResourceDescs, D3D12_RESOURCE_ALLOCATION_INFO1.Ptr, pResourceAllocationInfo1?, D3D12_RESOURCE_ALLOCATION_INFO)
+}
+struct D3D12_LIFETIME_STATE extends Int32 {
+    static D3D12_LIFETIME_STATE_IN_USE := 0
+    static D3D12_LIFETIME_STATE_NOT_IN_USE := 1
+}
+struct ID3D12LifetimeOwner extends IUnknown {
+    static IID := "{E667AF9F-CD56-4F46-83CE-032E595D70A8}"
+    LifetimeStateUpdated(NewState)
+      => ComCall(3, this.p, D3D12_LIFETIME_STATE, NewState, "void")
+}
+struct ID3D12SwapChainAssistant extends IUnknown {
+    static IID := "{F1DF64B6-57FD-49CD-8807-C0EB88B45C8F}"
+    GetLUID()
+      => ComCall(3, this.p, LUID)
+    GetSwapChainObject(riid, ppv)
+      => ComCall(4, this.p, GUID.Ptr, riid, Struct.Ptr.Ptr, ppv)
+    GetCurrentResourceAndCommandQueue(riidResource, ppvResource, riidQueue, ppvQueue)
+      => ComCall(5, this.p, GUID.Ptr, riidResource, Struct.Ptr.Ptr, ppvResource, GUID.Ptr, riidQueue, Struct.Ptr.Ptr, ppvQueue)
+    InsertImplicitSync()
+      => ComCall(6, this.p)
+}
+struct ID3D12LifetimeTracker extends ID3D12DeviceChild {
+    static IID := "{3FD03D36-4EB1-424A-A582-494ECB8BA813}"
+    DestroyOwnedObject(pObject)
+      => ComCall(8, this.p, ID3D12DeviceChild, pObject)
+}
+struct D3D12_META_COMMAND_PARAMETER_TYPE extends Int32 {
+    static D3D12_META_COMMAND_PARAMETER_TYPE_FLOAT := 0
+    static D3D12_META_COMMAND_PARAMETER_TYPE_UINT64 := 1
+    static D3D12_META_COMMAND_PARAMETER_TYPE_GPU_VIRTUAL_ADDRESS := 2
+    static D3D12_META_COMMAND_PARAMETER_TYPE_CPU_DESCRIPTOR_HANDLE_HEAP_TYPE_CBV_SRV_UAV := 3
+    static D3D12_META_COMMAND_PARAMETER_TYPE_GPU_DESCRIPTOR_HANDLE_HEAP_TYPE_CBV_SRV_UAV := 4
+}
+struct D3D12_META_COMMAND_PARAMETER_FLAGS extends Int32 {
+    static D3D12_META_COMMAND_PARAMETER_FLAG_INPUT := 1
+    static D3D12_META_COMMAND_PARAMETER_FLAG_OUTPUT := 2
+}
+struct D3D12_META_COMMAND_PARAMETER_STAGE extends Int32 {
+    static D3D12_META_COMMAND_PARAMETER_STAGE_CREATION := 0
+    static D3D12_META_COMMAND_PARAMETER_STAGE_INITIALIZATION := 1
+    static D3D12_META_COMMAND_PARAMETER_STAGE_EXECUTION := 2
+}
+struct D3D12_META_COMMAND_PARAMETER_DESC {
+    Name : PWSTR
+    Type : D3D12_META_COMMAND_PARAMETER_TYPE
+    Flags : D3D12_META_COMMAND_PARAMETER_FLAGS
+    RequiredResourceState : D3D12_RESOURCE_STATES
+    StructureOffset : UInt32
+}
+struct D3D12_GRAPHICS_STATES extends Int32 {
+    static D3D12_GRAPHICS_STATE_NONE := 0
+    static D3D12_GRAPHICS_STATE_IA_VERTEX_BUFFERS := 1
+    static D3D12_GRAPHICS_STATE_IA_INDEX_BUFFER := 2
+    static D3D12_GRAPHICS_STATE_IA_PRIMITIVE_TOPOLOGY := 4
+    static D3D12_GRAPHICS_STATE_DESCRIPTOR_HEAP := 8
+    static D3D12_GRAPHICS_STATE_GRAPHICS_ROOT_SIGNATURE := 16
+    static D3D12_GRAPHICS_STATE_COMPUTE_ROOT_SIGNATURE := 32
+    static D3D12_GRAPHICS_STATE_RS_VIEWPORTS := 64
+    static D3D12_GRAPHICS_STATE_RS_SCISSOR_RECTS := 128
+    static D3D12_GRAPHICS_STATE_PREDICATION := 256
+    static D3D12_GRAPHICS_STATE_OM_RENDER_TARGETS := 512
+    static D3D12_GRAPHICS_STATE_OM_STENCIL_REF := 1024
+    static D3D12_GRAPHICS_STATE_OM_BLEND_FACTOR := 2048
+    static D3D12_GRAPHICS_STATE_PIPELINE_STATE := 4096
+    static D3D12_GRAPHICS_STATE_SO_TARGETS := 8192
+    static D3D12_GRAPHICS_STATE_OM_DEPTH_BOUNDS := 16384
+    static D3D12_GRAPHICS_STATE_SAMPLE_POSITIONS := 32768
+    static D3D12_GRAPHICS_STATE_VIEW_INSTANCE_MASK := 65536
+}
+struct D3D12_META_COMMAND_DESC {
+    Id : GUID
+    Name : PWSTR
+    InitializationDirtyState : D3D12_GRAPHICS_STATES
+    ExecutionDirtyState : D3D12_GRAPHICS_STATES
+}
+struct ID3D12StateObject extends ID3D12Pageable {
+    static IID := "{47016943-FCA8-4594-93EA-AF258B55346D}"
+}
+struct ID3D12StateObjectProperties extends IUnknown {
+    static IID := "{DE5FA827-9BF9-4F26-89FF-D7F56FDE3860}"
+    GetShaderIdentifier(pExportName)
+      => ComCall(3, this.p, "Str", pExportName, Struct.Ptr)
+    GetShaderStackSize(pExportName)
+      => ComCall(4, this.p, "Str", pExportName, Int64)
+    GetPipelineStackSize()
+      => ComCall(5, this.p, Int64)
+    SetPipelineStackSize(PipelineStackSizeInBytes)
+      => ComCall(6, this.p, Int64, PipelineStackSizeInBytes, "void")
+}
+struct D3D12_PROGRAM_IDENTIFIER {
+    OpaqueData : Int64[4]
+}
+struct ID3D12StateObjectProperties1 extends ID3D12StateObjectProperties {
+    static IID := "{460CAAC7-1D24-446A-A184-CA67DB494138}"
+    GetProgramIdentifier(pProgramName)
+      => ComCall(7, this.p, "Str", pProgramName, D3D12_PROGRAM_IDENTIFIER)
+}
+struct ID3D12StateObjectProperties2 extends ID3D12StateObjectProperties1 {
+    static IID := "{D5E82917-F0F1-44CF-AE5E-CE222DD0B884}"
+    GetGlobalRootSignatureForProgram(pProgramName, riid, ppvRootSignature)
+      => ComCall(8, this.p, "Str", pProgramName, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvRootSignature)
+    GetGlobalRootSignatureForShader(pExportName, riid, ppvRootSignature)
+      => ComCall(9, this.p, "Str", pExportName, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvRootSignature)
+}
+struct D3D12_NODE_ID {
+    Name : PWSTR
+    ArrayIndex : UInt32
+}
+struct D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS {
+    MinSizeInBytes : Int64
+    MaxSizeInBytes : Int64
+    SizeGranularityInBytes : UInt32
+}
+struct ID3D12WorkGraphProperties extends IUnknown {
+    static IID := "{065ACF71-F863-4B89-82F4-02E4D5886757}"
+    GetNumWorkGraphs()
+      => ComCall(3, this.p, UInt32)
+    GetProgramName(WorkGraphIndex)
+      => ComCall(4, this.p, UInt32, WorkGraphIndex, PWSTR)
+    GetWorkGraphIndex(pProgramName)
+      => ComCall(5, this.p, "Str", pProgramName, UInt32)
+    GetNumNodes(WorkGraphIndex)
+      => ComCall(6, this.p, UInt32, WorkGraphIndex, UInt32)
+    GetNodeID(WorkGraphIndex, NodeIndex)
+      => ComCall(7, this.p, UInt32, WorkGraphIndex, UInt32, NodeIndex, D3D12_NODE_ID)
+    GetNodeIndex(WorkGraphIndex, NodeID)
+      => ComCall(8, this.p, UInt32, WorkGraphIndex, D3D12_NODE_ID, NodeID, UInt32)
+    GetNodeLocalRootArgumentsTableIndex(WorkGraphIndex, NodeIndex)
+      => ComCall(9, this.p, UInt32, WorkGraphIndex, UInt32, NodeIndex, UInt32)
+    GetNumEntrypoints(WorkGraphIndex)
+      => ComCall(10, this.p, UInt32, WorkGraphIndex, UInt32)
+    GetEntrypointID(WorkGraphIndex, EntrypointIndex)
+      => ComCall(11, this.p, UInt32, WorkGraphIndex, UInt32, EntrypointIndex, D3D12_NODE_ID)
+    GetEntrypointIndex(WorkGraphIndex, NodeID)
+      => ComCall(12, this.p, UInt32, WorkGraphIndex, D3D12_NODE_ID, NodeID, UInt32)
+    GetEntrypointRecordSizeInBytes(WorkGraphIndex, EntrypointIndex)
+      => ComCall(13, this.p, UInt32, WorkGraphIndex, UInt32, EntrypointIndex, UInt32)
+    GetWorkGraphMemoryRequirements(WorkGraphIndex, pWorkGraphMemoryRequirements)
+      => ComCall(14, this.p, UInt32, WorkGraphIndex, D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS.Ptr, pWorkGraphMemoryRequirements, "void")
+    GetEntrypointRecordAlignmentInBytes(WorkGraphIndex, EntrypointIndex)
+      => ComCall(15, this.p, UInt32, WorkGraphIndex, UInt32, EntrypointIndex, UInt32)
+}
+struct D3D12_STATE_SUBOBJECT_TYPE extends Int32 {
+    static D3D12_STATE_SUBOBJECT_TYPE_STATE_OBJECT_CONFIG := 0
+    static D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE := 1
+    static D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE := 2
+    static D3D12_STATE_SUBOBJECT_TYPE_NODE_MASK := 3
+    static D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY := 5
+    static D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION := 6
+    static D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION := 7
+    static D3D12_STATE_SUBOBJECT_TYPE_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION := 8
+    static D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG := 9
+    static D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG := 10
+    static D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP := 11
+    static D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG1 := 12
+    static D3D12_STATE_SUBOBJECT_TYPE_WORK_GRAPH := 13
+    static D3D12_STATE_SUBOBJECT_TYPE_STREAM_OUTPUT := 14
+    static D3D12_STATE_SUBOBJECT_TYPE_BLEND := 15
+    static D3D12_STATE_SUBOBJECT_TYPE_SAMPLE_MASK := 16
+    static D3D12_STATE_SUBOBJECT_TYPE_RASTERIZER := 17
+    static D3D12_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL := 18
+    static D3D12_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT := 19
+    static D3D12_STATE_SUBOBJECT_TYPE_IB_STRIP_CUT_VALUE := 20
+    static D3D12_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY := 21
+    static D3D12_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS := 22
+    static D3D12_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT := 23
+    static D3D12_STATE_SUBOBJECT_TYPE_SAMPLE_DESC := 24
+    static D3D12_STATE_SUBOBJECT_TYPE_FLAGS := 26
+    static D3D12_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1 := 27
+    static D3D12_STATE_SUBOBJECT_TYPE_VIEW_INSTANCING := 28
+    static D3D12_STATE_SUBOBJECT_TYPE_GENERIC_PROGRAM := 29
+    static D3D12_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2 := 30
+    static D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_SERIALIZED_ROOT_SIGNATURE := 31
+    static D3D12_STATE_SUBOBJECT_TYPE_LOCAL_SERIALIZED_ROOT_SIGNATURE := 32
+    static D3D12_STATE_SUBOBJECT_TYPE_COMPILER_EXISTING_COLLECTION := 33
+    static D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION_BY_KEY := 36
+    static D3D12_STATE_SUBOBJECT_TYPE_MAX_VALID := 37
+}
+struct D3D12_STATE_SUBOBJECT {
+    Type : D3D12_STATE_SUBOBJECT_TYPE
+    pDesc : Struct.Ptr
+}
+struct D3D12_STATE_OBJECT_FLAGS extends Int32 {
+    static D3D12_STATE_OBJECT_FLAG_NONE := 0
+    static D3D12_STATE_OBJECT_FLAG_ALLOW_LOCAL_DEPENDENCIES_ON_EXTERNAL_DEFINITIONS := 1
+    static D3D12_STATE_OBJECT_FLAG_ALLOW_EXTERNAL_DEPENDENCIES_ON_LOCAL_DEFINITIONS := 2
+    static D3D12_STATE_OBJECT_FLAG_ALLOW_STATE_OBJECT_ADDITIONS := 4
+}
+struct D3D12_STATE_OBJECT_CONFIG {
+    Flags : D3D12_STATE_OBJECT_FLAGS
+}
+struct D3D12_GLOBAL_ROOT_SIGNATURE {
+    pGlobalRootSignature : ID3D12RootSignature
+}
+struct D3D12_LOCAL_ROOT_SIGNATURE {
+    pLocalRootSignature : ID3D12RootSignature
+}
+struct D3D12_NODE_MASK {
+    NodeMask : UInt32
+}
+struct D3D12_SAMPLE_MASK {
+    SampleMask : UInt32
+}
+struct D3D12_IB_STRIP_CUT_VALUE {
+    IndexBufferStripCutValue : D3D12_INDEX_BUFFER_STRIP_CUT_VALUE
+}
+struct D3D12_PRIMITIVE_TOPOLOGY_DESC {
+    PrimitiveTopology : D3D12_PRIMITIVE_TOPOLOGY_TYPE
+}
+struct D3D12_DEPTH_STENCIL_FORMAT {
+    DepthStencilFormat : DXGI_FORMAT
+}
+struct D3D12_EXPORT_FLAGS extends Int32 {
+    static D3D12_EXPORT_FLAG_NONE := 0
+}
+struct D3D12_EXPORT_DESC {
+    Name : PWSTR
+    ExportToRename : PWSTR
+    Flags : D3D12_EXPORT_FLAGS
+}
+struct D3D12_DXIL_LIBRARY_DESC {
+    DXILLibrary : D3D12_SHADER_BYTECODE
+    NumExports : UInt32
+    pExports : D3D12_EXPORT_DESC.Ptr
+}
+struct D3D12_EXISTING_COLLECTION_DESC {
+    pExistingCollection : ID3D12StateObject
+    NumExports : UInt32
+    pExports : D3D12_EXPORT_DESC.Ptr
+}
+struct D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION {
+    pSubobjectToAssociate : D3D12_STATE_SUBOBJECT.Ptr
+    NumExports : UInt32
+    pExports : PWSTR.Ptr
+}
+struct D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION {
+    SubobjectToAssociate : PWSTR
+    NumExports : UInt32
+    pExports : PWSTR.Ptr
+}
+struct D3D12_HIT_GROUP_TYPE extends Int32 {
+    static D3D12_HIT_GROUP_TYPE_TRIANGLES := 0
+    static D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE := 1
+}
+struct D3D12_HIT_GROUP_DESC {
+    HitGroupExport : PWSTR
+    Type : D3D12_HIT_GROUP_TYPE
+    AnyHitShaderImport : PWSTR
+    ClosestHitShaderImport : PWSTR
+    IntersectionShaderImport : PWSTR
+}
+struct D3D12_RAYTRACING_SHADER_CONFIG {
+    MaxPayloadSizeInBytes : UInt32
+    MaxAttributeSizeInBytes : UInt32
+}
+struct D3D12_RAYTRACING_PIPELINE_CONFIG {
+    MaxTraceRecursionDepth : UInt32
+}
+struct D3D12_RAYTRACING_PIPELINE_FLAGS extends Int32 {
+    static D3D12_RAYTRACING_PIPELINE_FLAG_NONE := 0
+    static D3D12_RAYTRACING_PIPELINE_FLAG_SKIP_TRIANGLES := 256
+    static D3D12_RAYTRACING_PIPELINE_FLAG_SKIP_PROCEDURAL_PRIMITIVES := 512
+    static D3D12_RAYTRACING_PIPELINE_FLAG_ALLOW_OPACITY_MICROMAPS := 1024
+}
+struct D3D12_RAYTRACING_PIPELINE_CONFIG1 {
+    MaxTraceRecursionDepth : UInt32
+    Flags : D3D12_RAYTRACING_PIPELINE_FLAGS
+}
+struct D3D12_NODE_OUTPUT_OVERRIDES {
+    OutputIndex : UInt32
+    pNewName : D3D12_NODE_ID.Ptr
+    pAllowSparseNodes : BOOL.Ptr
+    pMaxRecords : UInt32.Ptr
+    pMaxRecordsSharedWithOutputIndex : UInt32.Ptr
+}
+struct D3D12_BROADCASTING_LAUNCH_OVERRIDES {
+    pLocalRootArgumentsTableIndex : UInt32.Ptr
+    pProgramEntry : BOOL.Ptr
+    pNewName : D3D12_NODE_ID.Ptr
+    pShareInputOf : D3D12_NODE_ID.Ptr
+    pDispatchGrid : UInt32.Ptr
+    pMaxDispatchGrid : UInt32.Ptr
+    NumOutputOverrides : UInt32
+    pOutputOverrides : D3D12_NODE_OUTPUT_OVERRIDES.Ptr
+}
+struct D3D12_COALESCING_LAUNCH_OVERRIDES {
+    pLocalRootArgumentsTableIndex : UInt32.Ptr
+    pProgramEntry : BOOL.Ptr
+    pNewName : D3D12_NODE_ID.Ptr
+    pShareInputOf : D3D12_NODE_ID.Ptr
+    NumOutputOverrides : UInt32
+    pOutputOverrides : D3D12_NODE_OUTPUT_OVERRIDES.Ptr
+}
+struct D3D12_THREAD_LAUNCH_OVERRIDES {
+    pLocalRootArgumentsTableIndex : UInt32.Ptr
+    pProgramEntry : BOOL.Ptr
+    pNewName : D3D12_NODE_ID.Ptr
+    pShareInputOf : D3D12_NODE_ID.Ptr
+    NumOutputOverrides : UInt32
+    pOutputOverrides : D3D12_NODE_OUTPUT_OVERRIDES.Ptr
+}
+struct D3D12_COMMON_COMPUTE_NODE_OVERRIDES {
+    pLocalRootArgumentsTableIndex : UInt32.Ptr
+    pProgramEntry : BOOL.Ptr
+    pNewName : D3D12_NODE_ID.Ptr
+    pShareInputOf : D3D12_NODE_ID.Ptr
+    NumOutputOverrides : UInt32
+    pOutputOverrides : D3D12_NODE_OUTPUT_OVERRIDES.Ptr
+}
+struct D3D12_NODE_OVERRIDES_TYPE extends Int32 {
+    static D3D12_NODE_OVERRIDES_TYPE_NONE := 0
+    static D3D12_NODE_OVERRIDES_TYPE_BROADCASTING_LAUNCH := 1
+    static D3D12_NODE_OVERRIDES_TYPE_COALESCING_LAUNCH := 2
+    static D3D12_NODE_OVERRIDES_TYPE_THREAD_LAUNCH := 3
+    static D3D12_NODE_OVERRIDES_TYPE_COMMON_COMPUTE := 4
+}
+struct D3D12_SHADER_NODE {
+    Shader : PWSTR
+    OverridesType : D3D12_NODE_OVERRIDES_TYPE
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            pBroadcastingLaunchOverrides : D3D12_BROADCASTING_LAUNCH_OVERRIDES.Ptr
+            pCoalescingLaunchOverrides : D3D12_COALESCING_LAUNCH_OVERRIDES.Ptr
+            pThreadLaunchOverrides : D3D12_THREAD_LAUNCH_OVERRIDES.Ptr
+            pCommonComputeNodeOverrides : D3D12_COMMON_COMPUTE_NODE_OVERRIDES.Ptr
+        }
+    }
+}
+struct D3D12_NODE_TYPE extends Int32 {
+    static D3D12_NODE_TYPE_SHADER := 0
+}
+struct D3D12_NODE {
+    NodeType : D3D12_NODE_TYPE
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Shader : D3D12_SHADER_NODE
+        }
+    }
+}
+struct D3D12_WORK_GRAPH_FLAGS extends Int32 {
+    static D3D12_WORK_GRAPH_FLAG_NONE := 0
+    static D3D12_WORK_GRAPH_FLAG_INCLUDE_ALL_AVAILABLE_NODES := 1
+}
+struct D3D12_WORK_GRAPH_DESC {
+    ProgramName : PWSTR
+    Flags : D3D12_WORK_GRAPH_FLAGS
+    NumEntrypoints : UInt32
+    pEntrypoints : D3D12_NODE_ID.Ptr
+    NumExplicitlyDefinedNodes : UInt32
+    pExplicitlyDefinedNodes : D3D12_NODE.Ptr
+}
+struct D3D12_GENERIC_PROGRAM_DESC {
+    ProgramName : PWSTR
+    NumExports : UInt32
+    pExports : PWSTR.Ptr
+    NumSubobjects : UInt32
+    ppSubobjects : D3D12_STATE_SUBOBJECT.Ptr.Ptr
+}
+struct D3D12_STATE_OBJECT_TYPE extends Int32 {
+    static D3D12_STATE_OBJECT_TYPE_COLLECTION := 0
+    static D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE := 3
+    static D3D12_STATE_OBJECT_TYPE_EXECUTABLE := 4
+}
+struct D3D12_STATE_OBJECT_DESC {
+    Type : D3D12_STATE_OBJECT_TYPE
+    NumSubobjects : UInt32
+    pSubobjects : D3D12_STATE_SUBOBJECT.Ptr
+}
+struct D3D12_RAYTRACING_GEOMETRY_FLAGS extends Int32 {
+    static D3D12_RAYTRACING_GEOMETRY_FLAG_NONE := 0
+    static D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE := 1
+    static D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION := 2
+}
+struct D3D12_RAYTRACING_GEOMETRY_TYPE extends Int32 {
+    static D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES := 0
+    static D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS := 1
+    static D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES := 2
+}
+struct D3D12_RAYTRACING_INSTANCE_FLAGS extends Int32 {
+    static D3D12_RAYTRACING_INSTANCE_FLAG_NONE := 0
+    static D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE := 1
+    static D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE := 2
+    static D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE := 4
+    static D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE := 8
+    static D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OMM_2_STATE := 16
+    static D3D12_RAYTRACING_INSTANCE_FLAG_DISABLE_OMMS := 32
+}
+struct D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE {
+    StartAddress : Int64
+    StrideInBytes : Int64
+}
+struct D3D12_GPU_VIRTUAL_ADDRESS_RANGE {
+    StartAddress : Int64
+    SizeInBytes : Int64
+}
+struct D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE {
+    StartAddress : Int64
+    SizeInBytes : Int64
+    StrideInBytes : Int64
+}
+struct D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC {
+    Transform3x4 : Int64
+    IndexFormat : DXGI_FORMAT
+    VertexFormat : DXGI_FORMAT
+    IndexCount : UInt32
+    VertexCount : UInt32
+    IndexBuffer : Int64
+    VertexBuffer : D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE
+}
+struct D3D12_RAYTRACING_AABB {
+    MinX : Float32
+    MinY : Float32
+    MinZ : Float32
+    MaxX : Float32
+    MaxY : Float32
+    MaxZ : Float32
+}
+struct D3D12_RAYTRACING_GEOMETRY_AABBS_DESC {
+    AABBCount : Int64
+    AABBs : D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_SPECIAL_INDEX extends Int32 {
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_SPECIAL_INDEX_FULLY_TRANSPARENT := -1
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_SPECIAL_INDEX_FULLY_OPAQUE := -2
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_SPECIAL_INDEX_FULLY_UNKNOWN_TRANSPARENT := -3
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_SPECIAL_INDEX_FULLY_UNKNOWN_OPAQUE := -4
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_STATE extends Int32 {
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_STATE_TRANSPARENT := 0
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_STATE_OPAQUE := 1
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_STATE_UNKNOWN_TRANSPARENT := 2
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_STATE_UNKNOWN_OPAQUE := 3
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT extends Int32 {
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_2_STATE := 1
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_4_STATE := 2
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_DESC {
+    ByteOffset : UInt32
+    _bitfield : UInt32
+}
+struct D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC {
+    OpacityMicromapIndexBuffer : D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE
+    OpacityMicromapIndexFormat : DXGI_FORMAT
+    OpacityMicromapBaseLocation : UInt32
+    OpacityMicromapArray : Int64
+}
+struct D3D12_RAYTRACING_GEOMETRY_OMM_TRIANGLES_DESC {
+    pTriangles : D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC.Ptr
+    pOmmLinkage : D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC.Ptr
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS extends Int32 {
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE := 0
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE := 1
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION := 2
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE := 4
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD := 8
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY := 16
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE := 32
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_OMM_UPDATE := 64
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_DISABLE_OMMS := 128
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE extends Int32 {
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_CLONE := 0
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT := 1
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_VISUALIZATION_DECODE_FOR_TOOLS := 2
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_SERIALIZE := 3
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE := 4
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE extends Int32 {
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL := 0
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL := 1
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY := 2
+}
+struct D3D12_ELEMENTS_LAYOUT extends Int32 {
+    static D3D12_ELEMENTS_LAYOUT_ARRAY := 0
+    static D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS := 1
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TYPE extends Int32 {
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE := 0
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TOOLS_VISUALIZATION := 1
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION := 2
+    static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE := 3
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC {
+    DestBuffer : Int64
+    InfoType : D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TYPE
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC {
+    CompactedSizeInBytes : Int64
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TOOLS_VISUALIZATION_DESC {
+    DecodedSizeInBytes : Int64
+}
+struct D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_TOOLS_VISUALIZATION_HEADER {
+    Type : D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE
+    NumDescs : UInt32
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC {
+    SerializedSizeInBytes : Int64
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            NumBottomLevelAccelerationStructurePointers : Int64
+            NumBottomLevelAccelerationStructureHeaderAndPointerListPairs : Int64
+        }
+    }
+}
+struct D3D12_SERIALIZED_DATA_DRIVER_MATCHING_IDENTIFIER {
+    DriverOpaqueGUID : GUID
+    DriverOpaqueVersioningData : UInt8[16]
+}
+struct D3D12_SERIALIZED_DATA_TYPE extends Int32 {
+    static D3D12_SERIALIZED_DATA_RAYTRACING_ACCELERATION_STRUCTURE := 0
+    static D3D12_SERIALIZED_DATA_APPLICATION_SPECIFIC_DRIVER_STATE := 1
+}
+struct D3D12_DRIVER_MATCHING_IDENTIFIER_STATUS extends Int32 {
+    static D3D12_DRIVER_MATCHING_IDENTIFIER_COMPATIBLE_WITH_DEVICE := 0
+    static D3D12_DRIVER_MATCHING_IDENTIFIER_UNSUPPORTED_TYPE := 1
+    static D3D12_DRIVER_MATCHING_IDENTIFIER_UNRECOGNIZED := 2
+    static D3D12_DRIVER_MATCHING_IDENTIFIER_INCOMPATIBLE_VERSION := 3
+    static D3D12_DRIVER_MATCHING_IDENTIFIER_INCOMPATIBLE_TYPE := 4
+}
+struct D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER {
+    DriverMatchingIdentifier : D3D12_SERIALIZED_DATA_DRIVER_MATCHING_IDENTIFIER
+    SerializedSizeInBytesIncludingHeader : Int64
+    DeserializedSizeInBytes : Int64
+    NumBottomLevelAccelerationStructurePointersAfterHeader : Int64
+}
+struct D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER_POSTAMBLE_TYPE extends Int32 {
+    static D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER_POSTAMBLE_TYPE_NONE := 0
+    static D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER_POSTAMBLE_TYPE_BOTTOM_LEVEL_POINTERS := 0
+    static D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER_POSTAMBLE_TYPE_BLOCKS := -1
+}
+struct D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER1 {
+    DriverMatchingIdentifier : D3D12_SERIALIZED_DATA_DRIVER_MATCHING_IDENTIFIER
+    SerializedSizeInBytesIncludingHeader : Int64
+    DeserializedSizeInBytes : Int64
+    Anonymous : this._Anonymous_e__Union
+    HeaderPostambleType : D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER_POSTAMBLE_TYPE
+    struct _Anonymous_e__Union {
+        union {
+            NumBottomLevelAccelerationStructurePointersAfterHeader : UInt32
+            NumBlocks : UInt32
+        }
+    }
+}
+struct D3D12_SERIALIZED_BLOCK_TYPE extends Int32 {
+    static D3D12_RAYTRACING_SERIALIZED_BLOCK_TYPE_OPACITY_MICROMAPS := 0
+}
+struct D3D12_RAYTRACING_SERIALIZED_BLOCK {
+    Type : D3D12_SERIALIZED_BLOCK_TYPE
+    NumBlockPointersAfterHeader : Int64
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE_DESC {
+    CurrentSizeInBytes : Int64
+}
+struct D3D12_RAYTRACING_INSTANCE_DESC {
+    Transform : Float32[12]
+    _bitfield1 : UInt32
+    _bitfield2 : UInt32
+    AccelerationStructure : Int64
+}
+struct D3D12_RAYTRACING_GEOMETRY_DESC {
+    Type : D3D12_RAYTRACING_GEOMETRY_TYPE
+    Flags : D3D12_RAYTRACING_GEOMETRY_FLAGS
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Triangles : D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC
+            AABBs : D3D12_RAYTRACING_GEOMETRY_AABBS_DESC
+            OmmTriangles : D3D12_RAYTRACING_GEOMETRY_OMM_TRIANGLES_DESC
+        }
+    }
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY {
+    Count : UInt32
+    SubdivisionLevel : UInt32
+    Format : D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC {
+    NumOmmHistogramEntries : UInt32
+    pOmmHistogram : D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY.Ptr
+    InputBuffer : Int64
+    PerOmmDescs : D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE
+}
+struct D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS {
+    Type : D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE
+    Flags : D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS
+    NumDescs : UInt32
+    DescsLayout : D3D12_ELEMENTS_LAYOUT
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            InstanceDescs : Int64
+            pGeometryDescs : D3D12_RAYTRACING_GEOMETRY_DESC.Ptr
+            ppGeometryDescs : D3D12_RAYTRACING_GEOMETRY_DESC.Ptr.Ptr
+            pOpacityMicromapArrayDesc : D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC.Ptr
+        }
+    }
+}
+struct D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC {
+    DestAccelerationStructureData : Int64
+    Inputs : D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
+    SourceAccelerationStructureData : Int64
+    ScratchAccelerationStructureData : Int64
+}
+struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO {
+    ResultDataMaxSizeInBytes : Int64
+    ScratchDataSizeInBytes : Int64
+    UpdateScratchDataSizeInBytes : Int64
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_TYPE extends Int32 {
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_CURRENT_SIZE := 0
+    static D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_TOOLS_VISUALIZATION := 1
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_DESC {
+    DestBuffer : Int64
+    InfoType : D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_TYPE
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_CURRENT_SIZE_DESC {
+    CurrentSizeInBytes : Int64
+}
+struct D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_TOOLS_VISUALIZATION_DESC {
+    DecodedSizeInBytes : Int64
+}
+struct D3D12_RAY_FLAGS extends Int32 {
+    static D3D12_RAY_FLAG_NONE := 0
+    static D3D12_RAY_FLAG_FORCE_OPAQUE := 1
+    static D3D12_RAY_FLAG_FORCE_NON_OPAQUE := 2
+    static D3D12_RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH := 4
+    static D3D12_RAY_FLAG_SKIP_CLOSEST_HIT_SHADER := 8
+    static D3D12_RAY_FLAG_CULL_BACK_FACING_TRIANGLES := 16
+    static D3D12_RAY_FLAG_CULL_FRONT_FACING_TRIANGLES := 32
+    static D3D12_RAY_FLAG_CULL_OPAQUE := 64
+    static D3D12_RAY_FLAG_CULL_NON_OPAQUE := 128
+    static D3D12_RAY_FLAG_SKIP_TRIANGLES := 256
+    static D3D12_RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES := 512
+    static D3D12_RAY_FLAG_FORCE_OMM_2_STATE := 1024
+}
+struct D3D12_HIT_KIND extends Int32 {
+    static D3D12_HIT_KIND_TRIANGLE_FRONT_FACE := 254
+    static D3D12_HIT_KIND_TRIANGLE_BACK_FACE := 255
+}
+struct ID3D12Device5 extends ID3D12Device4 {
+    static IID := "{8B4F173B-2FEA-4B80-8F58-4307191AB95D}"
+    CreateLifetimeTracker(pOwner, riid, ppvTracker)
+      => ComCall(57, this.p, ID3D12LifetimeOwner, pOwner, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvTracker)
+    RemoveDevice()
+      => ComCall(58, this.p, "void")
+    EnumerateMetaCommands(pDescs?)
+      => ComCall(59, this.p, UInt32.Ptr, pDescs?.Length ?? 0, D3D12_META_COMMAND_DESC.Ptr, pDescs?)
+    EnumerateMetaCommandParameters(CommandId, Stage, pTotalStructureSizeInBytes?, pParameterDescs?)
+      => ComCall(60, this.p, GUID.Ptr, CommandId, D3D12_META_COMMAND_PARAMETER_STAGE, Stage, UInt32.Ptr, pTotalStructureSizeInBytes?, UInt32.Ptr, pParameterDescs?.Length ?? 0, D3D12_META_COMMAND_PARAMETER_DESC.Ptr, pParameterDescs?)
+    CreateMetaCommand(CommandId, NodeMask, pCreationParametersData?, riid, ppMetaCommand)
+      => ComCall(61, this.p, GUID.Ptr, CommandId, UInt32, NodeMask, Struct.Ptr, pCreationParametersData?, IntPtr, pCreationParametersData?.Size ?? 0, GUID.Ptr, riid, Struct.Ptr.Ptr, ppMetaCommand)
+    CreateStateObject(pDesc, riid, ppStateObject)
+      => ComCall(62, this.p, D3D12_STATE_OBJECT_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppStateObject)
+    GetRaytracingAccelerationStructurePrebuildInfo(pDesc, pInfo)
+      => ComCall(63, this.p, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS.Ptr, pDesc, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO.Ptr, pInfo, "void")
+    CheckDriverMatchingIdentifier(SerializedDataType, pIdentifierToCheck)
+      => ComCall(64, this.p, D3D12_SERIALIZED_DATA_TYPE, SerializedDataType, D3D12_SERIALIZED_DATA_DRIVER_MATCHING_IDENTIFIER.Ptr, pIdentifierToCheck, D3D12_DRIVER_MATCHING_IDENTIFIER_STATUS)
+}
+struct D3D12_MARKER_API extends Int32 {
+    static D3D12_MARKER_API_SETMARKER := 0
+    static D3D12_MARKER_API_BEGINEVENT := 1
+    static D3D12_MARKER_API_ENDEVENT := 2
+    static D3D12_MARKER_API_DRAWINSTANCED := 3
+    static D3D12_MARKER_API_DRAWINDEXEDINSTANCED := 4
+    static D3D12_MARKER_API_EXECUTEINDIRECT := 5
+    static D3D12_MARKER_API_DISPATCH := 6
+    static D3D12_MARKER_API_COPYBUFFERREGION := 7
+    static D3D12_MARKER_API_COPYTEXTUREREGION := 8
+    static D3D12_MARKER_API_COPYRESOURCE := 9
+    static D3D12_MARKER_API_COPYTILES := 10
+    static D3D12_MARKER_API_RESOLVESUBRESOURCE := 11
+    static D3D12_MARKER_API_CLEARRENDERTARGETVIEW := 12
+    static D3D12_MARKER_API_CLEARUNORDEREDACCESSVIEW := 13
+    static D3D12_MARKER_API_CLEARDEPTHSTENCILVIEW := 14
+    static D3D12_MARKER_API_RESOURCEBARRIER := 15
+    static D3D12_MARKER_API_EXECUTEBUNDLE := 16
+    static D3D12_MARKER_API_PRESENT := 17
+    static D3D12_MARKER_API_RESOLVEQUERYDATA := 18
+    static D3D12_MARKER_API_BEGINSUBMISSION := 19
+    static D3D12_MARKER_API_ENDSUBMISSION := 20
+    static D3D12_MARKER_API_DECODEFRAME := 21
+    static D3D12_MARKER_API_PROCESSFRAMES := 22
+    static D3D12_MARKER_API_ATOMICCOPYBUFFERUINT := 23
+    static D3D12_MARKER_API_ATOMICCOPYBUFFERUINT64 := 24
+    static D3D12_MARKER_API_RESOLVESUBRESOURCEREGION := 25
+    static D3D12_MARKER_API_WRITEBUFFERIMMEDIATE := 26
+    static D3D12_MARKER_API_DECODEFRAME1 := 27
+    static D3D12_MARKER_API_SETPROTECTEDRESOURCESESSION := 28
+    static D3D12_MARKER_API_DECODEFRAME2 := 29
+    static D3D12_MARKER_API_PROCESSFRAMES1 := 30
+    static D3D12_MARKER_API_BUILDRAYTRACINGACCELERATIONSTRUCTURE := 31
+    static D3D12_MARKER_API_EMITRAYTRACINGACCELERATIONSTRUCTUREPOSTBUILDINFO := 32
+    static D3D12_MARKER_API_COPYRAYTRACINGACCELERATIONSTRUCTURE := 33
+    static D3D12_MARKER_API_DISPATCHRAYS := 34
+    static D3D12_MARKER_API_INITIALIZEMETACOMMAND := 35
+    static D3D12_MARKER_API_EXECUTEMETACOMMAND := 36
+    static D3D12_MARKER_API_ESTIMATEMOTION := 37
+    static D3D12_MARKER_API_RESOLVEMOTIONVECTORHEAP := 38
+    static D3D12_MARKER_API_SETPIPELINESTATE1 := 39
+    static D3D12_MARKER_API_INITIALIZEEXTENSIONCOMMAND := 40
+    static D3D12_MARKER_API_EXECUTEEXTENSIONCOMMAND := 41
+    static D3D12_MARKER_API_DISPATCHMESH := 42
+    static D3D12_MARKER_API_ENCODEFRAME := 43
+    static D3D12_MARKER_API_RESOLVEENCODEROUTPUTMETADATA := 44
+    static D3D12_MARKER_API_BARRIER := 45
+    static D3D12_MARKER_API_BEGIN_COMMAND_LIST := 46
+    static D3D12_MARKER_API_DISPATCHGRAPH := 47
+    static D3D12_MARKER_API_SETPROGRAM := 48
+    static D3D12_MARKER_API_ENCODEFRAME1 := 49
+    static D3D12_MARKER_API_RESOLVEENCODEROUTPUTMETADATA1 := 50
+    static D3D12_MARKER_API_RESOLVEINPUTPARAMLAYOUT := 51
+    static D3D12_MARKER_API_PROCESSFRAMES2 := 52
+    static D3D12_MARKER_API_SET_WORK_GRAPH_MAXIMUM_GPU_INPUT_RECORDS := 53
+}
+struct D3D12_AUTO_BREADCRUMB_OP extends Int32 {
+    static D3D12_AUTO_BREADCRUMB_OP_SETMARKER := 0
+    static D3D12_AUTO_BREADCRUMB_OP_BEGINEVENT := 1
+    static D3D12_AUTO_BREADCRUMB_OP_ENDEVENT := 2
+    static D3D12_AUTO_BREADCRUMB_OP_DRAWINSTANCED := 3
+    static D3D12_AUTO_BREADCRUMB_OP_DRAWINDEXEDINSTANCED := 4
+    static D3D12_AUTO_BREADCRUMB_OP_EXECUTEINDIRECT := 5
+    static D3D12_AUTO_BREADCRUMB_OP_DISPATCH := 6
+    static D3D12_AUTO_BREADCRUMB_OP_COPYBUFFERREGION := 7
+    static D3D12_AUTO_BREADCRUMB_OP_COPYTEXTUREREGION := 8
+    static D3D12_AUTO_BREADCRUMB_OP_COPYRESOURCE := 9
+    static D3D12_AUTO_BREADCRUMB_OP_COPYTILES := 10
+    static D3D12_AUTO_BREADCRUMB_OP_RESOLVESUBRESOURCE := 11
+    static D3D12_AUTO_BREADCRUMB_OP_CLEARRENDERTARGETVIEW := 12
+    static D3D12_AUTO_BREADCRUMB_OP_CLEARUNORDEREDACCESSVIEW := 13
+    static D3D12_AUTO_BREADCRUMB_OP_CLEARDEPTHSTENCILVIEW := 14
+    static D3D12_AUTO_BREADCRUMB_OP_RESOURCEBARRIER := 15
+    static D3D12_AUTO_BREADCRUMB_OP_EXECUTEBUNDLE := 16
+    static D3D12_AUTO_BREADCRUMB_OP_PRESENT := 17
+    static D3D12_AUTO_BREADCRUMB_OP_RESOLVEQUERYDATA := 18
+    static D3D12_AUTO_BREADCRUMB_OP_BEGINSUBMISSION := 19
+    static D3D12_AUTO_BREADCRUMB_OP_ENDSUBMISSION := 20
+    static D3D12_AUTO_BREADCRUMB_OP_DECODEFRAME := 21
+    static D3D12_AUTO_BREADCRUMB_OP_PROCESSFRAMES := 22
+    static D3D12_AUTO_BREADCRUMB_OP_ATOMICCOPYBUFFERUINT := 23
+    static D3D12_AUTO_BREADCRUMB_OP_ATOMICCOPYBUFFERUINT64 := 24
+    static D3D12_AUTO_BREADCRUMB_OP_RESOLVESUBRESOURCEREGION := 25
+    static D3D12_AUTO_BREADCRUMB_OP_WRITEBUFFERIMMEDIATE := 26
+    static D3D12_AUTO_BREADCRUMB_OP_DECODEFRAME1 := 27
+    static D3D12_AUTO_BREADCRUMB_OP_SETPROTECTEDRESOURCESESSION := 28
+    static D3D12_AUTO_BREADCRUMB_OP_DECODEFRAME2 := 29
+    static D3D12_AUTO_BREADCRUMB_OP_PROCESSFRAMES1 := 30
+    static D3D12_AUTO_BREADCRUMB_OP_BUILDRAYTRACINGACCELERATIONSTRUCTURE := 31
+    static D3D12_AUTO_BREADCRUMB_OP_EMITRAYTRACINGACCELERATIONSTRUCTUREPOSTBUILDINFO := 32
+    static D3D12_AUTO_BREADCRUMB_OP_COPYRAYTRACINGACCELERATIONSTRUCTURE := 33
+    static D3D12_AUTO_BREADCRUMB_OP_DISPATCHRAYS := 34
+    static D3D12_AUTO_BREADCRUMB_OP_INITIALIZEMETACOMMAND := 35
+    static D3D12_AUTO_BREADCRUMB_OP_EXECUTEMETACOMMAND := 36
+    static D3D12_AUTO_BREADCRUMB_OP_ESTIMATEMOTION := 37
+    static D3D12_AUTO_BREADCRUMB_OP_RESOLVEMOTIONVECTORHEAP := 38
+    static D3D12_AUTO_BREADCRUMB_OP_SETPIPELINESTATE1 := 39
+    static D3D12_AUTO_BREADCRUMB_OP_INITIALIZEEXTENSIONCOMMAND := 40
+    static D3D12_AUTO_BREADCRUMB_OP_EXECUTEEXTENSIONCOMMAND := 41
+    static D3D12_AUTO_BREADCRUMB_OP_DISPATCHMESH := 42
+    static D3D12_AUTO_BREADCRUMB_OP_ENCODEFRAME := 43
+    static D3D12_AUTO_BREADCRUMB_OP_RESOLVEENCODEROUTPUTMETADATA := 44
+    static D3D12_AUTO_BREADCRUMB_OP_BARRIER := 45
+    static D3D12_AUTO_BREADCRUMB_OP_BEGIN_COMMAND_LIST := 46
+    static D3D12_AUTO_BREADCRUMB_OP_DISPATCHGRAPH := 47
+    static D3D12_AUTO_BREADCRUMB_OP_SETPROGRAM := 48
+    static D3D12_AUTO_BREADCRUMB_OP_ENCODEFRAME1 := 49
+    static D3D12_AUTO_BREADCRUMB_OP_RESOLVEENCODEROUTPUTMETADATA1 := 50
+    static D3D12_AUTO_BREADCRUMB_OP_RESOLVEINPUTPARAMLAYOUT := 51
+    static D3D12_AUTO_BREADCRUMB_OP_PROCESSFRAMES2 := 52
+    static D3D12_AUTO_BREADCRUMB_OP_SET_WORK_GRAPH_MAXIMUM_GPU_INPUT_RECORDS := 53
+}
+struct D3D12_AUTO_BREADCRUMB_NODE {
+    pCommandListDebugNameA : UInt8.Ptr
+    pCommandListDebugNameW : PWSTR
+    pCommandQueueDebugNameA : UInt8.Ptr
+    pCommandQueueDebugNameW : PWSTR
+    pCommandList : ID3D12GraphicsCommandList
+    pCommandQueue : ID3D12CommandQueue
+    BreadcrumbCount : UInt32
+    pLastBreadcrumbValue : UInt32.Ptr
+    pCommandHistory : D3D12_AUTO_BREADCRUMB_OP.Ptr
+    pNext : D3D12_AUTO_BREADCRUMB_NODE.Ptr
+}
+struct D3D12_DRED_BREADCRUMB_CONTEXT {
+    BreadcrumbIndex : UInt32
+    pContextString : PWSTR
+}
+struct D3D12_AUTO_BREADCRUMB_NODE1 {
+    pCommandListDebugNameA : UInt8.Ptr
+    pCommandListDebugNameW : PWSTR
+    pCommandQueueDebugNameA : UInt8.Ptr
+    pCommandQueueDebugNameW : PWSTR
+    pCommandList : ID3D12GraphicsCommandList
+    pCommandQueue : ID3D12CommandQueue
+    BreadcrumbCount : UInt32
+    pLastBreadcrumbValue : UInt32.Ptr
+    pCommandHistory : D3D12_AUTO_BREADCRUMB_OP.Ptr
+    pNext : D3D12_AUTO_BREADCRUMB_NODE1.Ptr
+    BreadcrumbContextsCount : UInt32
+    pBreadcrumbContexts : D3D12_DRED_BREADCRUMB_CONTEXT.Ptr
+}
+struct D3D12_DRED_VERSION extends Int32 {
+    static D3D12_DRED_VERSION_1_0 := 1
+    static D3D12_DRED_VERSION_1_1 := 2
+    static D3D12_DRED_VERSION_1_2 := 3
+    static D3D12_DRED_VERSION_1_3 := 4
+}
+struct D3D12_DRED_FLAGS extends Int32 {
+    static D3D12_DRED_FLAG_NONE := 0
+    static D3D12_DRED_FLAG_FORCE_ENABLE := 1
+    static D3D12_DRED_FLAG_DISABLE_AUTOBREADCRUMBS := 2
+}
+struct D3D12_DRED_ENABLEMENT extends Int32 {
+    static D3D12_DRED_ENABLEMENT_SYSTEM_CONTROLLED := 0
+    static D3D12_DRED_ENABLEMENT_FORCED_OFF := 1
+    static D3D12_DRED_ENABLEMENT_FORCED_ON := 2
+}
+struct D3D12_DEVICE_REMOVED_EXTENDED_DATA {
+    Flags : D3D12_DRED_FLAGS
+    pHeadAutoBreadcrumbNode : D3D12_AUTO_BREADCRUMB_NODE.Ptr
+}
+struct D3D12_DRED_ALLOCATION_TYPE extends Int32 {
+    static D3D12_DRED_ALLOCATION_TYPE_COMMAND_QUEUE := 19
+    static D3D12_DRED_ALLOCATION_TYPE_COMMAND_ALLOCATOR := 20
+    static D3D12_DRED_ALLOCATION_TYPE_PIPELINE_STATE := 21
+    static D3D12_DRED_ALLOCATION_TYPE_COMMAND_LIST := 22
+    static D3D12_DRED_ALLOCATION_TYPE_FENCE := 23
+    static D3D12_DRED_ALLOCATION_TYPE_DESCRIPTOR_HEAP := 24
+    static D3D12_DRED_ALLOCATION_TYPE_HEAP := 25
+    static D3D12_DRED_ALLOCATION_TYPE_QUERY_HEAP := 27
+    static D3D12_DRED_ALLOCATION_TYPE_COMMAND_SIGNATURE := 28
+    static D3D12_DRED_ALLOCATION_TYPE_PIPELINE_LIBRARY := 29
+    static D3D12_DRED_ALLOCATION_TYPE_VIDEO_DECODER := 30
+    static D3D12_DRED_ALLOCATION_TYPE_VIDEO_PROCESSOR := 32
+    static D3D12_DRED_ALLOCATION_TYPE_RESOURCE := 34
+    static D3D12_DRED_ALLOCATION_TYPE_PASS := 35
+    static D3D12_DRED_ALLOCATION_TYPE_CRYPTOSESSION := 36
+    static D3D12_DRED_ALLOCATION_TYPE_CRYPTOSESSIONPOLICY := 37
+    static D3D12_DRED_ALLOCATION_TYPE_PROTECTEDRESOURCESESSION := 38
+    static D3D12_DRED_ALLOCATION_TYPE_VIDEO_DECODER_HEAP := 39
+    static D3D12_DRED_ALLOCATION_TYPE_COMMAND_POOL := 40
+    static D3D12_DRED_ALLOCATION_TYPE_COMMAND_RECORDER := 41
+    static D3D12_DRED_ALLOCATION_TYPE_STATE_OBJECT := 42
+    static D3D12_DRED_ALLOCATION_TYPE_METACOMMAND := 43
+    static D3D12_DRED_ALLOCATION_TYPE_SCHEDULINGGROUP := 44
+    static D3D12_DRED_ALLOCATION_TYPE_VIDEO_MOTION_ESTIMATOR := 45
+    static D3D12_DRED_ALLOCATION_TYPE_VIDEO_MOTION_VECTOR_HEAP := 46
+    static D3D12_DRED_ALLOCATION_TYPE_VIDEO_EXTENSION_COMMAND := 47
+    static D3D12_DRED_ALLOCATION_TYPE_VIDEO_ENCODER := 48
+    static D3D12_DRED_ALLOCATION_TYPE_VIDEO_ENCODER_HEAP := 49
+    static D3D12_DRED_ALLOCATION_TYPE_INVALID := -1
+}
+struct D3D12_DRED_ALLOCATION_NODE {
+    ObjectNameA : UInt8.Ptr
+    ObjectNameW : PWSTR
+    AllocationType : D3D12_DRED_ALLOCATION_TYPE
+    pNext : D3D12_DRED_ALLOCATION_NODE.Ptr
+}
+struct D3D12_DRED_ALLOCATION_NODE1 {
+    ObjectNameA : UInt8.Ptr
+    ObjectNameW : PWSTR
+    AllocationType : D3D12_DRED_ALLOCATION_TYPE
+    pNext : D3D12_DRED_ALLOCATION_NODE1.Ptr
+    pObject : IUnknown
+}
+struct D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT {
+    pHeadAutoBreadcrumbNode : D3D12_AUTO_BREADCRUMB_NODE.Ptr
+}
+struct D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 {
+    pHeadAutoBreadcrumbNode : D3D12_AUTO_BREADCRUMB_NODE1.Ptr
+}
+struct D3D12_DRED_PAGE_FAULT_OUTPUT {
+    PageFaultVA : Int64
+    pHeadExistingAllocationNode : D3D12_DRED_ALLOCATION_NODE.Ptr
+    pHeadRecentFreedAllocationNode : D3D12_DRED_ALLOCATION_NODE.Ptr
+}
+struct D3D12_DRED_PAGE_FAULT_OUTPUT1 {
+    PageFaultVA : Int64
+    pHeadExistingAllocationNode : D3D12_DRED_ALLOCATION_NODE1.Ptr
+    pHeadRecentFreedAllocationNode : D3D12_DRED_ALLOCATION_NODE1.Ptr
+}
+struct D3D12_DRED_PAGE_FAULT_FLAGS extends Int32 {
+    static D3D12_DRED_PAGE_FAULT_FLAGS_NONE := 0
+}
+struct D3D12_DRED_DEVICE_STATE extends Int32 {
+    static D3D12_DRED_DEVICE_STATE_UNKNOWN := 0
+    static D3D12_DRED_DEVICE_STATE_HUNG := 3
+    static D3D12_DRED_DEVICE_STATE_FAULT := 6
+    static D3D12_DRED_DEVICE_STATE_PAGEFAULT := 7
+}
+struct D3D12_DRED_PAGE_FAULT_OUTPUT2 {
+    PageFaultVA : Int64
+    pHeadExistingAllocationNode : D3D12_DRED_ALLOCATION_NODE1.Ptr
+    pHeadRecentFreedAllocationNode : D3D12_DRED_ALLOCATION_NODE1.Ptr
+    PageFaultFlags : D3D12_DRED_PAGE_FAULT_FLAGS
+}
+struct D3D12_DEVICE_REMOVED_EXTENDED_DATA1 {
+    DeviceRemovedReason : HRESULT
+    AutoBreadcrumbsOutput : D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT
+    PageFaultOutput : D3D12_DRED_PAGE_FAULT_OUTPUT
+}
+struct D3D12_DEVICE_REMOVED_EXTENDED_DATA2 {
+    DeviceRemovedReason : HRESULT
+    AutoBreadcrumbsOutput : D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1
+    PageFaultOutput : D3D12_DRED_PAGE_FAULT_OUTPUT1
+}
+struct D3D12_DEVICE_REMOVED_EXTENDED_DATA3 {
+    DeviceRemovedReason : HRESULT
+    AutoBreadcrumbsOutput : D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1
+    PageFaultOutput : D3D12_DRED_PAGE_FAULT_OUTPUT2
+    DeviceState : D3D12_DRED_DEVICE_STATE
+}
+struct D3D12_VERSIONED_DEVICE_REMOVED_EXTENDED_DATA {
+    Version : D3D12_DRED_VERSION
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Dred_1_0 : D3D12_DEVICE_REMOVED_EXTENDED_DATA
+            Dred_1_1 : D3D12_DEVICE_REMOVED_EXTENDED_DATA1
+            Dred_1_2 : D3D12_DEVICE_REMOVED_EXTENDED_DATA2
+            Dred_1_3 : D3D12_DEVICE_REMOVED_EXTENDED_DATA3
+        }
+    }
+}
+struct ID3D12DeviceRemovedExtendedDataSettings extends IUnknown {
+    static IID := "{82BC481C-6B9B-4030-AEDB-7EE3D1DF1E63}"
+    SetAutoBreadcrumbsEnablement(Enablement)
+      => ComCall(3, this.p, D3D12_DRED_ENABLEMENT, Enablement, "void")
+    SetPageFaultEnablement(Enablement)
+      => ComCall(4, this.p, D3D12_DRED_ENABLEMENT, Enablement, "void")
+    SetWatsonDumpEnablement(Enablement)
+      => ComCall(5, this.p, D3D12_DRED_ENABLEMENT, Enablement, "void")
+}
+struct ID3D12DeviceRemovedExtendedDataSettings1 extends ID3D12DeviceRemovedExtendedDataSettings {
+    static IID := "{DBD5AE51-3317-4F0A-ADF9-1D7CEDCAAE0B}"
+    SetBreadcrumbContextEnablement(Enablement)
+      => ComCall(6, this.p, D3D12_DRED_ENABLEMENT, Enablement, "void")
+}
+struct ID3D12DeviceRemovedExtendedDataSettings2 extends ID3D12DeviceRemovedExtendedDataSettings1 {
+    static IID := "{61552388-01AB-4008-A436-83DB189566EA}"
+    UseMarkersOnlyAutoBreadcrumbs(MarkersOnly)
+      => ComCall(7, this.p, BOOL, MarkersOnly, "void")
+}
+struct ID3D12DeviceRemovedExtendedData extends IUnknown {
+    static IID := "{98931D33-5AE8-4791-AA3C-1A73A2934E71}"
+    GetAutoBreadcrumbsOutput(pOutput)
+      => ComCall(3, this.p, D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT.Ptr, pOutput)
+    GetPageFaultAllocationOutput(pOutput)
+      => ComCall(4, this.p, D3D12_DRED_PAGE_FAULT_OUTPUT.Ptr, pOutput)
+}
+struct ID3D12DeviceRemovedExtendedData1 extends ID3D12DeviceRemovedExtendedData {
+    static IID := "{9727A022-CF1D-4DDA-9EBA-EFFA653FC506}"
+    GetAutoBreadcrumbsOutput1(pOutput)
+      => ComCall(5, this.p, D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1.Ptr, pOutput)
+    GetPageFaultAllocationOutput1(pOutput)
+      => ComCall(6, this.p, D3D12_DRED_PAGE_FAULT_OUTPUT1.Ptr, pOutput)
+}
+struct ID3D12DeviceRemovedExtendedData2 extends ID3D12DeviceRemovedExtendedData1 {
+    static IID := "{67FC5816-E4CA-4915-BF18-42541272DA54}"
+    GetPageFaultAllocationOutput2(pOutput)
+      => ComCall(7, this.p, D3D12_DRED_PAGE_FAULT_OUTPUT2.Ptr, pOutput)
+    GetDeviceState()
+      => ComCall(8, this.p, D3D12_DRED_DEVICE_STATE)
+}
+struct D3D12_BACKGROUND_PROCESSING_MODE extends Int32 {
+    static D3D12_BACKGROUND_PROCESSING_MODE_ALLOWED := 0
+    static D3D12_BACKGROUND_PROCESSING_MODE_ALLOW_INTRUSIVE_MEASUREMENTS := 1
+    static D3D12_BACKGROUND_PROCESSING_MODE_DISABLE_BACKGROUND_WORK := 2
+    static D3D12_BACKGROUND_PROCESSING_MODE_DISABLE_PROFILING_BY_SYSTEM := 3
+}
+struct D3D12_MEASUREMENTS_ACTION extends Int32 {
+    static D3D12_MEASUREMENTS_ACTION_KEEP_ALL := 0
+    static D3D12_MEASUREMENTS_ACTION_COMMIT_RESULTS := 1
+    static D3D12_MEASUREMENTS_ACTION_COMMIT_RESULTS_HIGH_PRIORITY := 2
+    static D3D12_MEASUREMENTS_ACTION_DISCARD_PREVIOUS := 3
+}
+struct ID3D12Device6 extends ID3D12Device5 {
+    static IID := "{C70B221B-40E4-4A17-89AF-025A0727A6DC}"
+    SetBackgroundProcessingMode(Mode, MeasurementsAction, hEventToSignalUponCompletion?, pbFurtherMeasurementsDesired?)
+      => ComCall(65, this.p, D3D12_BACKGROUND_PROCESSING_MODE, Mode, D3D12_MEASUREMENTS_ACTION, MeasurementsAction, HANDLE, hEventToSignalUponCompletion?, BOOL.Ptr, pbFurtherMeasurementsDesired?)
+}
+struct D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPE_COUNT {
+    NodeIndex : UInt32
+    Count : UInt32
+}
+struct D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES {
+    NodeIndex : UInt32
+    Count : UInt32
+    pTypes : GUID.Ptr
+}
+struct D3D12_PROTECTED_RESOURCE_SESSION_DESC1 {
+    NodeMask : UInt32
+    Flags : D3D12_PROTECTED_RESOURCE_SESSION_FLAGS
+    ProtectionType : GUID
+}
+struct ID3D12ProtectedResourceSession1 extends ID3D12ProtectedResourceSession {
+    static IID := "{D6F12DD6-76FB-406E-8961-4296EEFC0409}"
+    GetDesc1()
+      => ComCall(11, this.p, D3D12_PROTECTED_RESOURCE_SESSION_DESC1)
+}
+struct ID3D12Device7 extends ID3D12Device6 {
+    static IID := "{5C014B53-68A1-4B9B-8BD1-DD6046B9358B}"
+    AddToStateObject(pAddition, pStateObjectToGrowFrom, riid, ppNewStateObject)
+      => ComCall(66, this.p, D3D12_STATE_OBJECT_DESC.Ptr, pAddition, ID3D12StateObject, pStateObjectToGrowFrom, GUID.Ptr, riid, Struct.Ptr.Ptr, ppNewStateObject)
+    CreateProtectedResourceSession1(pDesc, riid, ppSession)
+      => ComCall(67, this.p, D3D12_PROTECTED_RESOURCE_SESSION_DESC1.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppSession)
+}
+struct ID3D12Device8 extends ID3D12Device7 {
+    static IID := "{9218E6BB-F944-4F7E-A75C-B1B2C7B701F3}"
+    GetResourceAllocationInfo2(visibleMask, pResourceDescs, pResourceAllocationInfo1?)
+      => ComCall(68, this.p, UInt32, visibleMask, UInt32, pResourceAllocationInfo1?.Length ?? 0, D3D12_RESOURCE_DESC1.Ptr, pResourceDescs, D3D12_RESOURCE_ALLOCATION_INFO1.Ptr, pResourceAllocationInfo1?, D3D12_RESOURCE_ALLOCATION_INFO)
+    CreateCommittedResource2(pHeapProperties, HeapFlags, pDesc, InitialResourceState, pOptimizedClearValue?, pProtectedSession?, riidResource, ppvResource?)
+      => ComCall(69, this.p, D3D12_HEAP_PROPERTIES.Ptr, pHeapProperties, D3D12_HEAP_FLAGS, HeapFlags, D3D12_RESOURCE_DESC1.Ptr, pDesc, D3D12_RESOURCE_STATES, InitialResourceState, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, ID3D12ProtectedResourceSession, pProtectedSession?, GUID.Ptr, riidResource, Struct.Ptr.Ptr, ppvResource?)
+    CreatePlacedResource1(pHeap, HeapOffset, pDesc, InitialState, pOptimizedClearValue?, riid, ppvResource?)
+      => ComCall(70, this.p, ID3D12Heap, pHeap, Int64, HeapOffset, D3D12_RESOURCE_DESC1.Ptr, pDesc, D3D12_RESOURCE_STATES, InitialState, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvResource?)
+    CreateSamplerFeedbackUnorderedAccessView(pTargetedResource?, pFeedbackResource?, DestDescriptor)
+      => ComCall(71, this.p, ID3D12Resource, pTargetedResource?, ID3D12Resource, pFeedbackResource?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor, "void")
+    GetCopyableFootprints1(pResourceDesc, FirstSubresource, BaseOffset, pLayouts?, pNumRows?, pRowSizeInBytes?, pTotalBytes?)
+      => ComCall(72, this.p, D3D12_RESOURCE_DESC1.Ptr, pResourceDesc, UInt32, FirstSubresource, UInt32, pRowSizeInBytes?.Length ?? 0, Int64, BaseOffset, D3D12_PLACED_SUBRESOURCE_FOOTPRINT.Ptr, pLayouts?, UInt32.Ptr, pNumRows?, Int64.Ptr, pRowSizeInBytes?, Int64.Ptr, pTotalBytes?, "void")
+}
+struct ID3D12Resource1 extends ID3D12Resource {
+    static IID := "{9D5E227A-4430-4161-88B3-3ECA6BB16E19}"
+    GetProtectedResourceSession(riid, ppProtectedSession?)
+      => ComCall(15, this.p, GUID.Ptr, riid, Struct.Ptr.Ptr, ppProtectedSession?)
+}
+struct ID3D12Resource2 extends ID3D12Resource1 {
+    static IID := "{BE36EC3B-EA85-4AEB-A45A-E9D76404A495}"
+    GetDesc1()
+      => ComCall(16, this.p, D3D12_RESOURCE_DESC1)
+}
+struct ID3D12Heap1 extends ID3D12Heap {
+    static IID := "{572F7389-2168-49E3-9693-D6DF5871BF6D}"
+    GetProtectedResourceSession(riid, ppProtectedSession?)
+      => ComCall(9, this.p, GUID.Ptr, riid, Struct.Ptr.Ptr, ppProtectedSession?)
+}
+struct ID3D12GraphicsCommandList3 extends ID3D12GraphicsCommandList2 {
+    static IID := "{6FDA83A7-B84C-4E38-9AC8-C7BD22016B3D}"
+    SetProtectedResourceSession(pProtectedResourceSession?)
+      => ComCall(67, this.p, ID3D12ProtectedResourceSession, pProtectedResourceSession?, "void")
+}
+struct D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE extends Int32 {
+    static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD := 0
+    static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE := 1
+    static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR := 2
+    static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS := 3
+    static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_RENDER := 4
+    static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_SRV := 5
+    static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_UAV := 6
+}
+struct D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS {
+    ClearValue : D3D12_CLEAR_VALUE
+}
+struct D3D12_RENDER_PASS_BEGINNING_ACCESS_PRESERVE_LOCAL_PARAMETERS {
+    AdditionalWidth : UInt32
+    AdditionalHeight : UInt32
+}
+struct D3D12_RENDER_PASS_BEGINNING_ACCESS {
+    Type : D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Clear : D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS
+            PreserveLocal : D3D12_RENDER_PASS_BEGINNING_ACCESS_PRESERVE_LOCAL_PARAMETERS
+        }
+    }
+}
+struct D3D12_RENDER_PASS_ENDING_ACCESS_TYPE extends Int32 {
+    static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD := 0
+    static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE := 1
+    static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE := 2
+    static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS := 3
+    static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE_LOCAL_RENDER := 4
+    static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE_LOCAL_SRV := 5
+    static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE_LOCAL_UAV := 6
+}
+struct D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS {
+    SrcSubresource : UInt32
+    DstSubresource : UInt32
+    DstX : UInt32
+    DstY : UInt32
+    SrcRect : RECT
+}
+struct D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS {
+    pSrcResource : ID3D12Resource
+    pDstResource : ID3D12Resource
+    SubresourceCount : UInt32
+    pSubresourceParameters : D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS.Ptr
+    Format : DXGI_FORMAT
+    ResolveMode : D3D12_RESOLVE_MODE
+    PreserveResolveSource : BOOL
+}
+struct D3D12_RENDER_PASS_ENDING_ACCESS_PRESERVE_LOCAL_PARAMETERS {
+    AdditionalWidth : UInt32
+    AdditionalHeight : UInt32
+}
+struct D3D12_RENDER_PASS_ENDING_ACCESS {
+    Type : D3D12_RENDER_PASS_ENDING_ACCESS_TYPE
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            Resolve : D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS
+            PreserveLocal : D3D12_RENDER_PASS_ENDING_ACCESS_PRESERVE_LOCAL_PARAMETERS
+        }
+    }
+}
+struct D3D12_RENDER_PASS_RENDER_TARGET_DESC {
+    cpuDescriptor : D3D12_CPU_DESCRIPTOR_HANDLE
+    BeginningAccess : D3D12_RENDER_PASS_BEGINNING_ACCESS
+    EndingAccess : D3D12_RENDER_PASS_ENDING_ACCESS
+}
+struct D3D12_RENDER_PASS_DEPTH_STENCIL_DESC {
+    cpuDescriptor : D3D12_CPU_DESCRIPTOR_HANDLE
+    DepthBeginningAccess : D3D12_RENDER_PASS_BEGINNING_ACCESS
+    StencilBeginningAccess : D3D12_RENDER_PASS_BEGINNING_ACCESS
+    DepthEndingAccess : D3D12_RENDER_PASS_ENDING_ACCESS
+    StencilEndingAccess : D3D12_RENDER_PASS_ENDING_ACCESS
+}
+struct D3D12_RENDER_PASS_FLAGS extends Int32 {
+    static D3D12_RENDER_PASS_FLAG_NONE := 0
+    static D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES := 1
+    static D3D12_RENDER_PASS_FLAG_SUSPENDING_PASS := 2
+    static D3D12_RENDER_PASS_FLAG_RESUMING_PASS := 4
+    static D3D12_RENDER_PASS_FLAG_BIND_READ_ONLY_DEPTH := 8
+    static D3D12_RENDER_PASS_FLAG_BIND_READ_ONLY_STENCIL := 16
+}
+struct ID3D12MetaCommand extends ID3D12Pageable {
+    static IID := "{DBB84C27-36CE-4FC9-B801-F048C46AC570}"
+    GetRequiredParameterResourceSize(Stage, ParameterIndex)
+      => ComCall(8, this.p, D3D12_META_COMMAND_PARAMETER_STAGE, Stage, UInt32, ParameterIndex, Int64)
+}
+struct D3D12_DISPATCH_RAYS_DESC {
+    RayGenerationShaderRecord : D3D12_GPU_VIRTUAL_ADDRESS_RANGE
+    MissShaderTable : D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE
+    HitGroupTable : D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE
+    CallableShaderTable : D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE
+    Width : UInt32
+    Height : UInt32
+    Depth : UInt32
+}
+struct D3D12_SET_WORK_GRAPH_FLAGS extends Int32 {
+    static D3D12_SET_WORK_GRAPH_FLAG_NONE := 0
+    static D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE := 1
+}
+struct D3D12_SET_WORK_GRAPH_DESC {
+    ProgramIdentifier : D3D12_PROGRAM_IDENTIFIER
+    Flags : D3D12_SET_WORK_GRAPH_FLAGS
+    BackingMemory : D3D12_GPU_VIRTUAL_ADDRESS_RANGE
+    NodeLocalRootArgumentsTable : D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE
+}
+struct D3D12_SET_RAYTRACING_PIPELINE_DESC {
+    ProgramIdentifier : D3D12_PROGRAM_IDENTIFIER
+}
+struct D3D12_SET_GENERIC_PIPELINE_DESC {
+    ProgramIdentifier : D3D12_PROGRAM_IDENTIFIER
+}
+struct D3D12_PROGRAM_TYPE extends Int32 {
+    static D3D12_PROGRAM_TYPE_GENERIC_PIPELINE := 1
+    static D3D12_PROGRAM_TYPE_RAYTRACING_PIPELINE := 4
+    static D3D12_PROGRAM_TYPE_WORK_GRAPH := 5
+}
+struct D3D12_SET_PROGRAM_DESC {
+    Type : D3D12_PROGRAM_TYPE
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            GenericPipeline : D3D12_SET_GENERIC_PIPELINE_DESC
+            RaytracingPipeline : D3D12_SET_RAYTRACING_PIPELINE_DESC
+            WorkGraph : D3D12_SET_WORK_GRAPH_DESC
+        }
+    }
+}
+struct D3D12_DISPATCH_MODE extends Int32 {
+    static D3D12_DISPATCH_MODE_NODE_CPU_INPUT := 0
+    static D3D12_DISPATCH_MODE_NODE_GPU_INPUT := 1
+    static D3D12_DISPATCH_MODE_MULTI_NODE_CPU_INPUT := 2
+    static D3D12_DISPATCH_MODE_MULTI_NODE_GPU_INPUT := 3
+}
+struct D3D12_NODE_CPU_INPUT {
+    EntrypointIndex : UInt32
+    NumRecords : UInt32
+    pRecords : Struct.Ptr
+    RecordStrideInBytes : Int64
+}
+struct D3D12_NODE_GPU_INPUT {
+    EntrypointIndex : UInt32
+    NumRecords : UInt32
+    Records : D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE
+}
+struct D3D12_MULTI_NODE_CPU_INPUT {
+    NumNodeInputs : UInt32
+    pNodeInputs : D3D12_NODE_CPU_INPUT.Ptr
+    NodeInputStrideInBytes : Int64
+}
+struct D3D12_MULTI_NODE_GPU_INPUT {
+    NumNodeInputs : UInt32
+    NodeInputs : D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE
+}
+struct D3D12_DISPATCH_GRAPH_DESC {
+    Mode : D3D12_DISPATCH_MODE
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            NodeCPUInput : D3D12_NODE_CPU_INPUT
+            NodeGPUInput : Int64
+            MultiNodeCPUInput : D3D12_MULTI_NODE_CPU_INPUT
+            MultiNodeGPUInput : Int64
+        }
+    }
+}
+struct ID3D12GraphicsCommandList4 extends ID3D12GraphicsCommandList3 {
+    static IID := "{8754318E-D3A9-4541-98CF-645B50DC4874}"
+    BeginRenderPass(pRenderTargets?, pDepthStencil?, Flags)
+      => ComCall(68, this.p, UInt32, pRenderTargets?.Length ?? 0, D3D12_RENDER_PASS_RENDER_TARGET_DESC.Ptr, pRenderTargets?, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC.Ptr, pDepthStencil?, D3D12_RENDER_PASS_FLAGS, Flags, "void")
+    EndRenderPass()
+      => ComCall(69, this.p, "void")
+    InitializeMetaCommand(pMetaCommand, pInitializationParametersData?)
+      => ComCall(70, this.p, ID3D12MetaCommand, pMetaCommand, Struct.Ptr, pInitializationParametersData?, IntPtr, pInitializationParametersData?.Size ?? 0, "void")
+    ExecuteMetaCommand(pMetaCommand, pExecutionParametersData?)
+      => ComCall(71, this.p, ID3D12MetaCommand, pMetaCommand, Struct.Ptr, pExecutionParametersData?, IntPtr, pExecutionParametersData?.Size ?? 0, "void")
+    BuildRaytracingAccelerationStructure(pDesc, pPostbuildInfoDescs?)
+      => ComCall(72, this.p, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC.Ptr, pDesc, UInt32, pPostbuildInfoDescs?.Length ?? 0, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC.Ptr, pPostbuildInfoDescs?, "void")
+    EmitRaytracingAccelerationStructurePostbuildInfo(pDesc, pSourceAccelerationStructureData)
+      => ComCall(73, this.p, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC.Ptr, pDesc, UInt32, pSourceAccelerationStructureData.Length, Int64.Ptr, pSourceAccelerationStructureData, "void")
+    CopyRaytracingAccelerationStructure(DestAccelerationStructureData, SourceAccelerationStructureData, Mode)
+      => ComCall(74, this.p, Int64, DestAccelerationStructureData, Int64, SourceAccelerationStructureData, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE, Mode, "void")
+    SetPipelineState1(pStateObject)
+      => ComCall(75, this.p, ID3D12StateObject, pStateObject, "void")
+    DispatchRays(pDesc)
+      => ComCall(76, this.p, D3D12_DISPATCH_RAYS_DESC.Ptr, pDesc, "void")
+}
+struct D3D12_SHADER_CACHE_MODE extends Int32 {
+    static D3D12_SHADER_CACHE_MODE_MEMORY := 0
+    static D3D12_SHADER_CACHE_MODE_DISK := 1
+}
+struct D3D12_SHADER_CACHE_FLAGS extends Int32 {
+    static D3D12_SHADER_CACHE_FLAG_NONE := 0
+    static D3D12_SHADER_CACHE_FLAG_DRIVER_VERSIONED := 1
+    static D3D12_SHADER_CACHE_FLAG_USE_WORKING_DIR := 2
+}
+struct D3D12_SHADER_CACHE_SESSION_DESC {
+    Identifier : GUID
+    Mode : D3D12_SHADER_CACHE_MODE
+    Flags : D3D12_SHADER_CACHE_FLAGS
+    MaximumInMemoryCacheSizeBytes : UInt32
+    MaximumInMemoryCacheEntries : UInt32
+    MaximumValueFileSizeBytes : UInt32
+    Version : Int64
+}
+struct D3D12_BARRIER_LAYOUT extends Int32 {
+    static D3D12_BARRIER_LAYOUT_UNDEFINED := -1
+    static D3D12_BARRIER_LAYOUT_COMMON := 0
+    static D3D12_BARRIER_LAYOUT_PRESENT := 0
+    static D3D12_BARRIER_LAYOUT_GENERIC_READ := 1
+    static D3D12_BARRIER_LAYOUT_RENDER_TARGET := 2
+    static D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS := 3
+    static D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE := 4
+    static D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ := 5
+    static D3D12_BARRIER_LAYOUT_SHADER_RESOURCE := 6
+    static D3D12_BARRIER_LAYOUT_COPY_SOURCE := 7
+    static D3D12_BARRIER_LAYOUT_COPY_DEST := 8
+    static D3D12_BARRIER_LAYOUT_RESOLVE_SOURCE := 9
+    static D3D12_BARRIER_LAYOUT_RESOLVE_DEST := 10
+    static D3D12_BARRIER_LAYOUT_SHADING_RATE_SOURCE := 11
+    static D3D12_BARRIER_LAYOUT_VIDEO_DECODE_READ := 12
+    static D3D12_BARRIER_LAYOUT_VIDEO_DECODE_WRITE := 13
+    static D3D12_BARRIER_LAYOUT_VIDEO_PROCESS_READ := 14
+    static D3D12_BARRIER_LAYOUT_VIDEO_PROCESS_WRITE := 15
+    static D3D12_BARRIER_LAYOUT_VIDEO_ENCODE_READ := 16
+    static D3D12_BARRIER_LAYOUT_VIDEO_ENCODE_WRITE := 17
+    static D3D12_BARRIER_LAYOUT_DIRECT_QUEUE_COMMON := 18
+    static D3D12_BARRIER_LAYOUT_DIRECT_QUEUE_GENERIC_READ := 19
+    static D3D12_BARRIER_LAYOUT_DIRECT_QUEUE_UNORDERED_ACCESS := 20
+    static D3D12_BARRIER_LAYOUT_DIRECT_QUEUE_SHADER_RESOURCE := 21
+    static D3D12_BARRIER_LAYOUT_DIRECT_QUEUE_COPY_SOURCE := 22
+    static D3D12_BARRIER_LAYOUT_DIRECT_QUEUE_COPY_DEST := 23
+    static D3D12_BARRIER_LAYOUT_COMPUTE_QUEUE_COMMON := 24
+    static D3D12_BARRIER_LAYOUT_COMPUTE_QUEUE_GENERIC_READ := 25
+    static D3D12_BARRIER_LAYOUT_COMPUTE_QUEUE_UNORDERED_ACCESS := 26
+    static D3D12_BARRIER_LAYOUT_COMPUTE_QUEUE_SHADER_RESOURCE := 27
+    static D3D12_BARRIER_LAYOUT_COMPUTE_QUEUE_COPY_SOURCE := 28
+    static D3D12_BARRIER_LAYOUT_COMPUTE_QUEUE_COPY_DEST := 29
+    static D3D12_BARRIER_LAYOUT_DIRECT_QUEUE_GENERIC_READ_COMPUTE_QUEUE_ACCESSIBLE := 31
+}
+struct D3D12_FEATURE_DATA_BARRIER_LAYOUT {
+    CommandListType : D3D12_COMMAND_LIST_TYPE
+    Layout : D3D12_BARRIER_LAYOUT
+    Supported : BOOL
+}
+struct D3D12_BARRIER_SYNC extends Int32 {
+    static D3D12_BARRIER_SYNC_NONE := 0
+    static D3D12_BARRIER_SYNC_ALL := 1
+    static D3D12_BARRIER_SYNC_DRAW := 2
+    static D3D12_BARRIER_SYNC_INDEX_INPUT := 4
+    static D3D12_BARRIER_SYNC_VERTEX_SHADING := 8
+    static D3D12_BARRIER_SYNC_PIXEL_SHADING := 16
+    static D3D12_BARRIER_SYNC_DEPTH_STENCIL := 32
+    static D3D12_BARRIER_SYNC_RENDER_TARGET := 64
+    static D3D12_BARRIER_SYNC_COMPUTE_SHADING := 128
+    static D3D12_BARRIER_SYNC_RAYTRACING := 256
+    static D3D12_BARRIER_SYNC_COPY := 512
+    static D3D12_BARRIER_SYNC_RESOLVE := 1024
+    static D3D12_BARRIER_SYNC_EXECUTE_INDIRECT := 2048
+    static D3D12_BARRIER_SYNC_PREDICATION := 2048
+    static D3D12_BARRIER_SYNC_ALL_SHADING := 4096
+    static D3D12_BARRIER_SYNC_NON_PIXEL_SHADING := 8192
+    static D3D12_BARRIER_SYNC_EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO := 16384
+    static D3D12_BARRIER_SYNC_CLEAR_UNORDERED_ACCESS_VIEW := 32768
+    static D3D12_BARRIER_SYNC_VIDEO_DECODE := 1048576
+    static D3D12_BARRIER_SYNC_VIDEO_PROCESS := 2097152
+    static D3D12_BARRIER_SYNC_VIDEO_ENCODE := 4194304
+    static D3D12_BARRIER_SYNC_BUILD_RAYTRACING_ACCELERATION_STRUCTURE := 8388608
+    static D3D12_BARRIER_SYNC_COPY_RAYTRACING_ACCELERATION_STRUCTURE := 16777216
+    static D3D12_BARRIER_SYNC_SPLIT := -2147483648
+}
+struct D3D12_BARRIER_ACCESS extends Int32 {
+    static D3D12_BARRIER_ACCESS_COMMON := 0
+    static D3D12_BARRIER_ACCESS_VERTEX_BUFFER := 1
+    static D3D12_BARRIER_ACCESS_CONSTANT_BUFFER := 2
+    static D3D12_BARRIER_ACCESS_INDEX_BUFFER := 4
+    static D3D12_BARRIER_ACCESS_RENDER_TARGET := 8
+    static D3D12_BARRIER_ACCESS_UNORDERED_ACCESS := 16
+    static D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE := 32
+    static D3D12_BARRIER_ACCESS_DEPTH_STENCIL_READ := 64
+    static D3D12_BARRIER_ACCESS_SHADER_RESOURCE := 128
+    static D3D12_BARRIER_ACCESS_STREAM_OUTPUT := 256
+    static D3D12_BARRIER_ACCESS_INDIRECT_ARGUMENT := 512
+    static D3D12_BARRIER_ACCESS_PREDICATION := 512
+    static D3D12_BARRIER_ACCESS_COPY_DEST := 1024
+    static D3D12_BARRIER_ACCESS_COPY_SOURCE := 2048
+    static D3D12_BARRIER_ACCESS_RESOLVE_DEST := 4096
+    static D3D12_BARRIER_ACCESS_RESOLVE_SOURCE := 8192
+    static D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_READ := 16384
+    static D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_WRITE := 32768
+    static D3D12_BARRIER_ACCESS_SHADING_RATE_SOURCE := 65536
+    static D3D12_BARRIER_ACCESS_VIDEO_DECODE_READ := 131072
+    static D3D12_BARRIER_ACCESS_VIDEO_DECODE_WRITE := 262144
+    static D3D12_BARRIER_ACCESS_VIDEO_PROCESS_READ := 524288
+    static D3D12_BARRIER_ACCESS_VIDEO_PROCESS_WRITE := 1048576
+    static D3D12_BARRIER_ACCESS_VIDEO_ENCODE_READ := 2097152
+    static D3D12_BARRIER_ACCESS_VIDEO_ENCODE_WRITE := 4194304
+    static D3D12_BARRIER_ACCESS_NO_ACCESS := -2147483648
+}
+struct D3D12_BARRIER_TYPE extends Int32 {
+    static D3D12_BARRIER_TYPE_GLOBAL := 0
+    static D3D12_BARRIER_TYPE_TEXTURE := 1
+    static D3D12_BARRIER_TYPE_BUFFER := 2
+}
+struct D3D12_TEXTURE_BARRIER_FLAGS extends Int32 {
+    static D3D12_TEXTURE_BARRIER_FLAG_NONE := 0
+    static D3D12_TEXTURE_BARRIER_FLAG_DISCARD := 1
+}
+struct D3D12_BARRIER_SUBRESOURCE_RANGE {
+    IndexOrFirstMipLevel : UInt32
+    NumMipLevels : UInt32
+    FirstArraySlice : UInt32
+    NumArraySlices : UInt32
+    FirstPlane : UInt32
+    NumPlanes : UInt32
+}
+struct D3D12_GLOBAL_BARRIER {
+    SyncBefore : D3D12_BARRIER_SYNC
+    SyncAfter : D3D12_BARRIER_SYNC
+    AccessBefore : D3D12_BARRIER_ACCESS
+    AccessAfter : D3D12_BARRIER_ACCESS
+}
+struct D3D12_TEXTURE_BARRIER {
+    SyncBefore : D3D12_BARRIER_SYNC
+    SyncAfter : D3D12_BARRIER_SYNC
+    AccessBefore : D3D12_BARRIER_ACCESS
+    AccessAfter : D3D12_BARRIER_ACCESS
+    LayoutBefore : D3D12_BARRIER_LAYOUT
+    LayoutAfter : D3D12_BARRIER_LAYOUT
+    pResource : ID3D12Resource
+    Subresources : D3D12_BARRIER_SUBRESOURCE_RANGE
+    Flags : D3D12_TEXTURE_BARRIER_FLAGS
+}
+struct D3D12_BUFFER_BARRIER {
+    SyncBefore : D3D12_BARRIER_SYNC
+    SyncAfter : D3D12_BARRIER_SYNC
+    AccessBefore : D3D12_BARRIER_ACCESS
+    AccessAfter : D3D12_BARRIER_ACCESS
+    pResource : ID3D12Resource
+    Offset : Int64
+    Size : Int64
+}
+struct D3D12_BARRIER_GROUP {
+    Type : D3D12_BARRIER_TYPE
+    NumBarriers : UInt32
+    Anonymous : this._Anonymous_e__Union
+    struct _Anonymous_e__Union {
+        union {
+            pGlobalBarriers : D3D12_GLOBAL_BARRIER.Ptr
+            pTextureBarriers : D3D12_TEXTURE_BARRIER.Ptr
+            pBufferBarriers : D3D12_BUFFER_BARRIER.Ptr
+        }
+    }
+}
+struct ID3D12ShaderCacheSession extends ID3D12DeviceChild {
+    static IID := "{28E2495D-0F64-4AE4-A6EC-129255DC49A8}"
+    FindValue(pKey, pValue, pValueSize)
+      => ComCall(8, this.p, Struct.Ptr, pKey, UInt32, pKey.Size, Struct.Ptr, pValue, UInt32.Ptr, pValueSize)
+    StoreValue(pKey, pValue)
+      => ComCall(9, this.p, Struct.Ptr, pKey, UInt32, pKey.Size, Struct.Ptr, pValue, UInt32, pValue.Size)
+    SetDeleteOnDestroy()
+      => ComCall(10, this.p, "void")
+    GetDesc()
+      => ComCall(11, this.p, D3D12_SHADER_CACHE_SESSION_DESC)
+}
+struct D3D12_SHADER_CACHE_KIND_FLAGS extends Int32 {
+    static D3D12_SHADER_CACHE_KIND_FLAG_IMPLICIT_D3D_CACHE_FOR_DRIVER := 1
+    static D3D12_SHADER_CACHE_KIND_FLAG_IMPLICIT_D3D_CONVERSIONS := 2
+    static D3D12_SHADER_CACHE_KIND_FLAG_IMPLICIT_DRIVER_MANAGED := 4
+    static D3D12_SHADER_CACHE_KIND_FLAG_APPLICATION_MANAGED := 8
+}
+struct D3D12_SHADER_CACHE_CONTROL_FLAGS extends Int32 {
+    static D3D12_SHADER_CACHE_CONTROL_FLAG_DISABLE := 1
+    static D3D12_SHADER_CACHE_CONTROL_FLAG_ENABLE := 2
+    static D3D12_SHADER_CACHE_CONTROL_FLAG_CLEAR := 4
+}
+struct ID3D12Device9 extends ID3D12Device8 {
+    static IID := "{4C80E962-F032-4F60-BC9E-EBC2CFA1D83C}"
+    CreateShaderCacheSession(pDesc, riid, ppvSession?)
+      => ComCall(73, this.p, D3D12_SHADER_CACHE_SESSION_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvSession?)
+    ShaderCacheControl(Kinds, Control)
+      => ComCall(74, this.p, D3D12_SHADER_CACHE_KIND_FLAGS, Kinds, D3D12_SHADER_CACHE_CONTROL_FLAGS, Control)
+    CreateCommandQueue1(pDesc, CreatorID, riid, ppCommandQueue)
+      => ComCall(75, this.p, D3D12_COMMAND_QUEUE_DESC.Ptr, pDesc, GUID.Ptr, CreatorID, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCommandQueue)
+}
+struct ID3D12Device10 extends ID3D12Device9 {
+    static IID := "{517F8718-AA66-49F9-B02B-A7AB89C06031}"
+    CreateCommittedResource3(pHeapProperties, HeapFlags, pDesc, InitialLayout, pOptimizedClearValue?, pProtectedSession?, pCastableFormats?, riidResource, ppvResource?)
+      => ComCall(76, this.p, D3D12_HEAP_PROPERTIES.Ptr, pHeapProperties, D3D12_HEAP_FLAGS, HeapFlags, D3D12_RESOURCE_DESC1.Ptr, pDesc, D3D12_BARRIER_LAYOUT, InitialLayout, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, ID3D12ProtectedResourceSession, pProtectedSession?, UInt32, pCastableFormats?.Length ?? 0, DXGI_FORMAT.Ptr, pCastableFormats?, GUID.Ptr, riidResource, Struct.Ptr.Ptr, ppvResource?)
+    CreatePlacedResource2(pHeap, HeapOffset, pDesc, InitialLayout, pOptimizedClearValue?, pCastableFormats?, riid, ppvResource?)
+      => ComCall(77, this.p, ID3D12Heap, pHeap, Int64, HeapOffset, D3D12_RESOURCE_DESC1.Ptr, pDesc, D3D12_BARRIER_LAYOUT, InitialLayout, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, UInt32, pCastableFormats?.Length ?? 0, DXGI_FORMAT.Ptr, pCastableFormats?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvResource?)
+    CreateReservedResource2(pDesc, InitialLayout, pOptimizedClearValue?, pProtectedSession?, pCastableFormats?, riid, ppvResource?)
+      => ComCall(78, this.p, D3D12_RESOURCE_DESC.Ptr, pDesc, D3D12_BARRIER_LAYOUT, InitialLayout, D3D12_CLEAR_VALUE.Ptr, pOptimizedClearValue?, ID3D12ProtectedResourceSession, pProtectedSession?, UInt32, pCastableFormats?.Length ?? 0, DXGI_FORMAT.Ptr, pCastableFormats?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvResource?)
+}
+struct ID3D12Device11 extends ID3D12Device10 {
+    static IID := "{5405C344-D457-444E-B4DD-2366E45AEE39}"
+    CreateSampler2(pDesc, DestDescriptor)
+      => ComCall(79, this.p, D3D12_SAMPLER_DESC2.Ptr, pDesc, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor, "void")
+}
+struct ID3D12Device12 extends ID3D12Device11 {
+    static IID := "{5AF5C532-4C91-4CD0-B541-15A405395FC5}"
+    GetResourceAllocationInfo3(visibleMask, pResourceDescs, pNumCastableFormats?, ppCastableFormats?, pResourceAllocationInfo1?)
+      => ComCall(80, this.p, UInt32, visibleMask, UInt32, pResourceAllocationInfo1?.Length ?? 0, D3D12_RESOURCE_DESC1.Ptr, pResourceDescs, UInt32.Ptr, pNumCastableFormats?, DXGI_FORMAT.Ptr.Ptr, ppCastableFormats?, D3D12_RESOURCE_ALLOCATION_INFO1.Ptr, pResourceAllocationInfo1?, D3D12_RESOURCE_ALLOCATION_INFO)
+}
+struct ID3D12Device13 extends ID3D12Device12 {
+    static IID := "{14EECFFC-4DF8-40F7-A118-5C816F45695E}"
+    OpenExistingHeapFromAddress1(pAddress, size, riid, ppvHeap)
+      => ComCall(81, this.p, Struct.Ptr, pAddress, IntPtr, size, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvHeap)
+}
+struct ID3D12Device14 extends ID3D12Device13 {
+    static IID := "{5F6E592D-D895-44C2-8E4A-88AD4926D323}"
+    CreateRootSignatureFromSubobjectInLibrary(nodeMask, pLibraryBlob, subobjectName?, riid, ppvRootSignature)
+      => ComCall(82, this.p, UInt32, nodeMask, Struct.Ptr, pLibraryBlob, IntPtr, pLibraryBlob.Length, "Str", subobjectName?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvRootSignature)
+}
+struct D3D12_TRIM_NOTIFICATION_FLAGS extends Int32 {
+    static D3D12_TRIM_NOTIFICATION_FLAG_NONE := 0
+    static D3D12_TRIM_NOTIFICATION_FLAG_PERIODIC_TRIM := 1
+    static D3D12_TRIM_NOTIFICATION_FLAG_RESTART_PERIODIC_TRIM := 2
+    static D3D12_TRIM_NOTIFICATION_FLAG_TRIM_TO_BUDGET := 4
+}
+struct D3D12_TRIM_NOTIFICATION {
+    pContext : Struct.Ptr
+    Flags : D3D12_TRIM_NOTIFICATION_FLAGS
+    NumBytesToTrim : Int64
+}
+struct D3D12_PFN_TRIM_NOTIFICATION_CALLBACK extends FunctionPointer {
+    static Types := [D3D12_TRIM_NOTIFICATION.Ptr, "Void"]
+}
+struct D3D12_REGISTER_TRIM_NOTIFICATION {
+    pfnCallback : D3D12_PFN_TRIM_NOTIFICATION_CALLBACK
+    pContext : Struct.Ptr
+    CallbackCookie : UInt32
+}
+struct D3D12_QUERY_HEAP_FLAGS extends Int32 {
+    static D3D12_QUERY_HEAP_FLAG_NONE := 0
+    static D3D12_QUERY_HEAP_FLAG_CPU_RESOLVE := 1
+}
+struct ID3D12Device15 extends ID3D12Device14 {
+    static IID := "{76CFF76F-1E9B-4450-8CDC-34F1AF788E5B}"
+    RegisterTrimNotificationCallback(pData)
+      => ComCall(83, this.p, D3D12_REGISTER_TRIM_NOTIFICATION.Ptr, pData)
+    UnregisterTrimNotificationCallback(CallbackCookie)
+      => ComCall(84, this.p, UInt32, CallbackCookie)
+    TryCreateShaderResourceView(pResource?, pDesc?, DestDescriptor)
+      => ComCall(85, this.p, ID3D12Resource, pResource?, D3D12_SHADER_RESOURCE_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor)
+    TryCreateUnorderedAccessView(pResource?, pCounterResource?, pDesc?, DestDescriptor)
+      => ComCall(86, this.p, ID3D12Resource, pResource?, ID3D12Resource, pCounterResource?, D3D12_UNORDERED_ACCESS_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor)
+    TryCreateConstantBufferView(pDesc?, DestDescriptor)
+      => ComCall(87, this.p, D3D12_CONSTANT_BUFFER_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor)
+    TryCreateSampler2(pDesc, DestDescriptor)
+      => ComCall(88, this.p, D3D12_SAMPLER_DESC2.Ptr, pDesc, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor)
+    TryCreateRenderTargetView(pResource?, pDesc?, DestDescriptor)
+      => ComCall(89, this.p, ID3D12Resource, pResource?, D3D12_RENDER_TARGET_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor)
+    TryCreateDepthStencilView(pResource?, pDesc?, DestDescriptor)
+      => ComCall(90, this.p, ID3D12Resource, pResource?, D3D12_DEPTH_STENCIL_VIEW_DESC.Ptr, pDesc?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor)
+    TryCreateSamplerFeedbackUnorderedAccessView(pTargetedResource?, pFeedbackResource?, DestDescriptor)
+      => ComCall(91, this.p, ID3D12Resource, pTargetedResource?, ID3D12Resource, pFeedbackResource?, D3D12_CPU_DESCRIPTOR_HANDLE, DestDescriptor)
+    CreateQueryHeap1(pDesc, Flags, riid, ppvHeap)
+      => ComCall(92, this.p, D3D12_QUERY_HEAP_DESC.Ptr, pDesc, D3D12_QUERY_HEAP_FLAGS, Flags, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvHeap)
+    ResolveQueryData(pQueryHeap, Type, StartIndex, NumQueries, pResolvedQueryData)
+      => ComCall(93, this.p, ID3D12QueryHeap, pQueryHeap, D3D12_QUERY_TYPE, Type, UInt32, StartIndex, UInt32, NumQueries, Struct.Ptr, pResolvedQueryData)
+}
+struct D3D12_VERSION_NUMBER {
+    union {
+        Version : Int64
+        VersionParts : UInt16[4]
+    }
+}
+struct D3D12_FEATURE_DATA_SHADERCACHE_ABI_SUPPORT {
+    szAdapterFamily : UInt16[128]
+    MinimumABISupportVersion : Int64
+    MaximumABISupportVersion : Int64
+    CompilerVersion : D3D12_VERSION_NUMBER
+    ApplicationProfileVersion : D3D12_VERSION_NUMBER
+}
+struct D3D12PipelineStateFunc extends FunctionPointer {
+    static Types := [Struct.Ptr, UInt32, UInt32, D3D12_PIPELINE_STATE_STREAM_DESC.Ptr, Struct.Ptr, "Void"]
+}
+struct D3D12StateObjectFunc extends FunctionPointer {
+    static Types := [Struct.Ptr, UInt32, UInt32, D3D12_STATE_OBJECT_DESC.Ptr, Struct.Ptr, UInt32, Struct.Ptr, "Void"]
+}
+struct D3D12_APPLICATION_DESC {
+    pExeFilename : PWSTR
+    pName : PWSTR
+    Version : D3D12_VERSION_NUMBER
+    pEngineName : PWSTR
+    EngineVersion : D3D12_VERSION_NUMBER
+}
+struct D3D12ApplicationDescFunc extends FunctionPointer {
+    static Types := [D3D12_APPLICATION_DESC.Ptr, Struct.Ptr, "Void"]
+}
+struct D3D12_EXISTING_COLLECTION_BY_KEY_DESC {
+    pKey : Struct.Ptr
+    KeySize : UInt32
+    NumExports : UInt32
+    pExports : D3D12_EXPORT_DESC.Ptr
+}
+struct ID3D12StateObjectDatabase extends IUnknown {
+    static IID := "{C56060B7-B5FC-4135-98E0-A1E9997EACE0}"
+    SetApplicationDesc(pApplicationDesc)
+      => ComCall(3, this.p, D3D12_APPLICATION_DESC.Ptr, pApplicationDesc)
+    GetApplicationDesc(CallbackFunc, pContext?)
+      => ComCall(4, this.p, D3D12ApplicationDescFunc, CallbackFunc, Struct.Ptr, pContext?)
+    StorePipelineStateDesc(pKey, Version, pDesc)
+      => ComCall(5, this.p, Struct.Ptr, pKey, UInt32, pKey.Length, UInt32, Version, D3D12_PIPELINE_STATE_STREAM_DESC.Ptr, pDesc)
+    FindPipelineStateDesc(pKey, CallbackFunc, pContext?)
+      => ComCall(6, this.p, Struct.Ptr, pKey, UInt32, pKey.Length, D3D12PipelineStateFunc, CallbackFunc, Struct.Ptr, pContext?)
+    StoreStateObjectDesc(pKey, Version, pDesc, pStateObjectToGrowFromKey?)
+      => ComCall(7, this.p, Struct.Ptr, pKey, UInt32, pKey.Length, UInt32, Version, D3D12_STATE_OBJECT_DESC.Ptr, pDesc, Struct.Ptr, pStateObjectToGrowFromKey?, UInt32, pStateObjectToGrowFromKey?.Length ?? 0)
+    FindStateObjectDesc(pKey, KeySize, CallbackFunc, pContext?)
+      => ComCall(8, this.p, Struct.Ptr, pKey, UInt32, KeySize, D3D12StateObjectFunc, CallbackFunc, Struct.Ptr, pContext?)
+    FindObjectVersion(pKey, KeySize, pVersion)
+      => ComCall(9, this.p, Struct.Ptr, pKey, UInt32, KeySize, UInt32.Ptr, pVersion)
+}
+struct ID3D12VirtualizationGuestDevice extends IUnknown {
+    static IID := "{BC66D368-7373-4943-8757-FC87DC79E476}"
+    ShareWithHost(pObject, pHandle)
+      => ComCall(3, this.p, ID3D12DeviceChild, pObject, HANDLE.Ptr, pHandle)
+    CreateFenceFd(pFence, FenceValue, pFenceFd)
+      => ComCall(4, this.p, ID3D12Fence, pFence, Int64, FenceValue, Int32.Ptr, pFenceFd)
+}
+struct ID3D12Tools extends IUnknown {
+    static IID := "{7071E1F0-E84B-4B33-974F-12FA49DE65C5}"
+    EnableShaderInstrumentation(bEnable)
+      => ComCall(3, this.p, BOOL, bEnable, "void")
+    ShaderInstrumentationEnabled()
+      => ComCall(4, this.p, BOOL)
+}
+struct ID3D12Tools1 extends ID3D12Tools {
+    static IID := "{E4FBC019-DD3C-43E1-8F32-7F649575F0A0}"
+    ReserveGPUVARangesAtCreate(pRanges)
+      => ComCall(5, this.p, D3D12_GPU_VIRTUAL_ADDRESS_RANGE.Ptr, pRanges, UInt32, pRanges.Length)
+    ClearReservedGPUVARangesList()
+      => ComCall(6, this.p, "void")
+}
+struct ID3D12Tools2 extends ID3D12Tools1 {
+    static IID := "{01D393C5-C9B0-42A1-958C-C26B02D4D097}"
+    SetApplicationSpecificDriverState(pAdapter, pBlob?)
+      => ComCall(7, this.p, IUnknown, pAdapter, ID3DBlob, pBlob?)
+}
+struct ID3D12RuntimeValidationControl extends IUnknown {
+    static IID := "{C706C811-3663-4BF1-91B9-1E8A7C114AB9}"
+    DisableFailuresFromStricterValidationInAppLocalRuntime(bDisable)
+      => ComCall(3, this.p, BOOL, bDisable, "void")
+    FailuresFromStricterValidationInAppLocalRuntimeDisabled()
+      => ComCall(4, this.p, BOOL)
+}
+struct ID3D12PageableTools extends IUnknown {
+    static IID := "{8F1359DB-D8D1-42F9-B5CF-79F4CBAD0D3D}"
+    GetAllocation(pAllocation)
+      => ComCall(3, this.p, D3D12_GPU_VIRTUAL_ADDRESS_RANGE.Ptr, pAllocation)
+}
+struct ID3D12DeviceTools extends IUnknown {
+    static IID := "{2EA68E9C-19C3-4E47-A109-6CDADFF0ACA9}"
+    SetNextAllocationAddress(nextAllocationVirtualAddress)
+      => ComCall(3, this.p, Int64, nextAllocationVirtualAddress, "void")
+}
+struct D3D12_APPLICATION_SPECIFIC_DRIVER_BLOB_STATUS extends Int32 {
+    static D3D12_APPLICATION_SPECIFIC_DRIVER_BLOB_UNKNOWN := 1
+    static D3D12_APPLICATION_SPECIFIC_DRIVER_BLOB_USED := 2
+    static D3D12_APPLICATION_SPECIFIC_DRIVER_BLOB_IGNORED := 3
+    static D3D12_APPLICATION_SPECIFIC_DRIVER_BLOB_NOT_SPECIFIED := 4
+}
+struct ID3D12DeviceTools1 extends ID3D12DeviceTools {
+    static IID := "{E30E9FC7-E641-4D6E-8A81-9DD9206EC47A}"
+    GetApplicationSpecificDriverState(ppBlob)
+      => ComCall(4, this.p, ID3DBlob.Ptr, ppBlob)
+    GetApplicationSpecificDriverBlobStatus()
+      => ComCall(5, this.p, D3D12_APPLICATION_SPECIFIC_DRIVER_BLOB_STATUS)
+}
+struct D3D12_SUBRESOURCE_DATA {
+    pData : Struct.Ptr
+    RowPitch : IntPtr
+    SlicePitch : IntPtr
+}
+struct D3D12_MEMCPY_DEST {
+    pData : Struct.Ptr
+    RowPitch : IntPtr
+    SlicePitch : IntPtr
+}
+struct ID3D12Debug extends IUnknown {
+    static IID := "{344488B7-6846-474B-B989-F027448245E0}"
+    EnableDebugLayer()
+      => ComCall(3, this.p, "void")
+}
+struct D3D12_GPU_BASED_VALIDATION_FLAGS extends Int32 {
+    static D3D12_GPU_BASED_VALIDATION_FLAGS_NONE := 0
+    static D3D12_GPU_BASED_VALIDATION_FLAGS_DISABLE_STATE_TRACKING := 1
+}
+struct ID3D12Debug1 extends IUnknown {
+    static IID := "{AFFAA4CA-63FE-4D8E-B8AD-159000AF4304}"
+    EnableDebugLayer()
+      => ComCall(3, this.p, "void")
+    SetEnableGPUBasedValidation(Enable)
+      => ComCall(4, this.p, BOOL, Enable, "void")
+    SetEnableSynchronizedCommandQueueValidation(Enable)
+      => ComCall(5, this.p, BOOL, Enable, "void")
+}
+struct ID3D12Debug2 extends IUnknown {
+    static IID := "{93A665C4-A3B2-4E5D-B692-A26AE14E3374}"
+    SetGPUBasedValidationFlags(Flags)
+      => ComCall(3, this.p, D3D12_GPU_BASED_VALIDATION_FLAGS, Flags, "void")
+}
+struct ID3D12Debug3 extends ID3D12Debug {
+    static IID := "{5CF4E58F-F671-4FF1-A542-3686E3D153D1}"
+    SetEnableGPUBasedValidation(Enable)
+      => ComCall(4, this.p, BOOL, Enable, "void")
+    SetEnableSynchronizedCommandQueueValidation(Enable)
+      => ComCall(5, this.p, BOOL, Enable, "void")
+    SetGPUBasedValidationFlags(Flags)
+      => ComCall(6, this.p, D3D12_GPU_BASED_VALIDATION_FLAGS, Flags, "void")
+}
+struct ID3D12Debug4 extends ID3D12Debug3 {
+    static IID := "{014B816E-9EC5-4A2F-A845-FFBE441CE13A}"
+    DisableDebugLayer()
+      => ComCall(7, this.p, "void")
+}
+struct ID3D12Debug5 extends ID3D12Debug4 {
+    static IID := "{548D6B12-09FA-40E0-9069-5DCD589A52C9}"
+    SetEnableAutoName(Enable)
+      => ComCall(8, this.p, BOOL, Enable, "void")
+}
+struct ID3D12Debug6 extends ID3D12Debug5 {
+    static IID := "{82A816D6-5D01-4157-97D0-4975463FD1ED}"
+    SetForceLegacyBarrierValidation(Enable)
+      => ComCall(9, this.p, BOOL, Enable, "void")
+}
+struct D3D12_RLDO_FLAGS extends Int32 {
+    static D3D12_RLDO_NONE := 0
+    static D3D12_RLDO_SUMMARY := 1
+    static D3D12_RLDO_DETAIL := 2
+    static D3D12_RLDO_IGNORE_INTERNAL := 4
+}
+struct D3D12_DEBUG_DEVICE_PARAMETER_TYPE extends Int32 {
+    static D3D12_DEBUG_DEVICE_PARAMETER_FEATURE_FLAGS := 0
+    static D3D12_DEBUG_DEVICE_PARAMETER_GPU_BASED_VALIDATION_SETTINGS := 1
+    static D3D12_DEBUG_DEVICE_PARAMETER_GPU_SLOWDOWN_PERFORMANCE_FACTOR := 2
+    static D3D12_DEBUG_DEVICE_PARAMETER_BYTECODE_VALIDATION_MODE := 3
+}
+struct D3D12_DEBUG_FEATURE extends Int32 {
+    static D3D12_DEBUG_FEATURE_NONE := 0
+    static D3D12_DEBUG_FEATURE_ALLOW_BEHAVIOR_CHANGING_DEBUG_AIDS := 1
+    static D3D12_DEBUG_FEATURE_CONSERVATIVE_RESOURCE_STATE_TRACKING := 2
+    static D3D12_DEBUG_FEATURE_DISABLE_VIRTUALIZED_BUNDLES_VALIDATION := 4
+    static D3D12_DEBUG_FEATURE_EMULATE_WINDOWS7 := 8
+}
+struct D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE extends Int32 {
+    static D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE_NONE := 0
+    static D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE_STATE_TRACKING_ONLY := 1
+    static D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE_UNGUARDED_VALIDATION := 2
+    static D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE_GUARDED_VALIDATION := 3
+    static NUM_D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODES := 4
+}
+struct D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAGS extends Int32 {
+    static D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAG_NONE := 0
+    static D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAG_FRONT_LOAD_CREATE_TRACKING_ONLY_SHADERS := 1
+    static D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAG_FRONT_LOAD_CREATE_UNGUARDED_VALIDATION_SHADERS := 2
+    static D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAG_FRONT_LOAD_CREATE_GUARDED_VALIDATION_SHADERS := 4
+    static D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAGS_VALID_MASK := 7
+}
+struct D3D12_DEBUG_DEVICE_GPU_BASED_VALIDATION_SETTINGS {
+    MaxMessagesPerCommandList : UInt32
+    DefaultShaderPatchMode : D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE
+    PipelineStateCreateFlags : D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAGS
+}
+struct D3D12_DEBUG_DEVICE_GPU_SLOWDOWN_PERFORMANCE_FACTOR {
+    SlowdownFactor : Float32
+}
+struct D3D12_DEBUG_DEVICE_BYTECODE_VALIDATION_MODE extends Int32 {
+    static D3D12_DEBUG_DEVICE_BYTECODE_VALIDATION_DISABLED := 0
+    static D3D12_DEBUG_DEVICE_BYTECODE_VALIDATION_WHEN_HASH_BYPASSED := 1
+    static D3D12_DEBUG_DEVICE_BYTECODE_VALIDATION_ALL_BYTECODE := 2
+    static D3D12_DEBUG_DEVICE_BYTECODE_VALIDATION_MODE_DEFAULT := 1
+}
+struct ID3D12DebugDevice1 extends IUnknown {
+    static IID := "{A9B71770-D099-4A65-A698-3DEE10020F88}"
+    SetDebugParameter(Type, pData)
+      => ComCall(3, this.p, D3D12_DEBUG_DEVICE_PARAMETER_TYPE, Type, Struct.Ptr, pData, UInt32, pData.Size)
+    GetDebugParameter(Type, pData)
+      => ComCall(4, this.p, D3D12_DEBUG_DEVICE_PARAMETER_TYPE, Type, Struct.Ptr, pData, UInt32, pData.Size)
+    ReportLiveDeviceObjects(Flags)
+      => ComCall(5, this.p, D3D12_RLDO_FLAGS, Flags)
+}
+struct ID3D12DebugDevice extends IUnknown {
+    static IID := "{3FEBD6DD-4973-4787-8194-E45F9E28923E}"
+    SetFeatureMask(Mask)
+      => ComCall(3, this.p, D3D12_DEBUG_FEATURE, Mask)
+    GetFeatureMask()
+      => ComCall(4, this.p, D3D12_DEBUG_FEATURE)
+    ReportLiveDeviceObjects(Flags)
+      => ComCall(5, this.p, D3D12_RLDO_FLAGS, Flags)
+}
+struct ID3D12DebugDevice2 extends ID3D12DebugDevice {
+    static IID := "{60ECCBC1-378D-4DF1-894C-F8AC5CE4D7DD}"
+    SetDebugParameter(Type, pData)
+      => ComCall(6, this.p, D3D12_DEBUG_DEVICE_PARAMETER_TYPE, Type, Struct.Ptr, pData, UInt32, pData.Size)
+    GetDebugParameter(Type, pData)
+      => ComCall(7, this.p, D3D12_DEBUG_DEVICE_PARAMETER_TYPE, Type, Struct.Ptr, pData, UInt32, pData.Size)
+}
+struct ID3D12DebugCommandQueue extends IUnknown {
+    static IID := "{09E0BF36-54AC-484F-8847-4BAEEAB6053A}"
+    AssertResourceState(pResource, Subresource, State)
+      => ComCall(3, this.p, ID3D12Resource, pResource, UInt32, Subresource, UInt32, State, BOOL)
+}
+struct ID3D12DebugCommandQueue1 extends ID3D12DebugCommandQueue {
+    static IID := "{16BE35A2-BFD6-49F2-BCAE-EAAE4AFF862D}"
+    AssertResourceAccess(pResource, Subresource, Access)
+      => ComCall(4, this.p, ID3D12Resource, pResource, UInt32, Subresource, D3D12_BARRIER_ACCESS, Access, "void")
+    AssertTextureLayout(pResource, Subresource, Layout)
+      => ComCall(5, this.p, ID3D12Resource, pResource, UInt32, Subresource, D3D12_BARRIER_LAYOUT, Layout, "void")
+}
+struct D3D12_DEBUG_COMMAND_LIST_PARAMETER_TYPE extends Int32 {
+    static D3D12_DEBUG_COMMAND_LIST_PARAMETER_GPU_BASED_VALIDATION_SETTINGS := 0
+}
+struct D3D12_DEBUG_COMMAND_LIST_GPU_BASED_VALIDATION_SETTINGS {
+    ShaderPatchMode : D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE
+}
+struct ID3D12DebugCommandList1 extends IUnknown {
+    static IID := "{102CA951-311B-4B01-B11F-ECB83E061B37}"
+    AssertResourceState(pResource, Subresource, State)
+      => ComCall(3, this.p, ID3D12Resource, pResource, UInt32, Subresource, UInt32, State, BOOL)
+    SetDebugParameter(Type, pData)
+      => ComCall(4, this.p, D3D12_DEBUG_COMMAND_LIST_PARAMETER_TYPE, Type, Struct.Ptr, pData, UInt32, pData.Size)
+    GetDebugParameter(Type, pData)
+      => ComCall(5, this.p, D3D12_DEBUG_COMMAND_LIST_PARAMETER_TYPE, Type, Struct.Ptr, pData, UInt32, pData.Size)
+}
+struct ID3D12DebugCommandList extends IUnknown {
+    static IID := "{09E0BF36-54AC-484F-8847-4BAEEAB6053F}"
+    AssertResourceState(pResource, Subresource, State)
+      => ComCall(3, this.p, ID3D12Resource, pResource, UInt32, Subresource, UInt32, State, BOOL)
+    SetFeatureMask(Mask)
+      => ComCall(4, this.p, D3D12_DEBUG_FEATURE, Mask)
+    GetFeatureMask()
+      => ComCall(5, this.p, D3D12_DEBUG_FEATURE)
+}
+struct ID3D12DebugCommandList2 extends ID3D12DebugCommandList {
+    static IID := "{AEB575CF-4E06-48BE-BA3B-C450FC96652E}"
+    SetDebugParameter(Type, pData)
+      => ComCall(6, this.p, D3D12_DEBUG_COMMAND_LIST_PARAMETER_TYPE, Type, Struct.Ptr, pData, UInt32, pData.Size)
+    GetDebugParameter(Type, pData)
+      => ComCall(7, this.p, D3D12_DEBUG_COMMAND_LIST_PARAMETER_TYPE, Type, Struct.Ptr, pData, UInt32, pData.Size)
+}
+struct ID3D12DebugCommandList3 extends ID3D12DebugCommandList2 {
+    static IID := "{197D5E15-4D37-4D34-AF78-724CD70FDB1F}"
+    AssertResourceAccess(pResource, Subresource, Access)
+      => ComCall(8, this.p, ID3D12Resource, pResource, UInt32, Subresource, D3D12_BARRIER_ACCESS, Access, "void")
+    AssertTextureLayout(pResource, Subresource, Layout)
+      => ComCall(9, this.p, ID3D12Resource, pResource, UInt32, Subresource, D3D12_BARRIER_LAYOUT, Layout, "void")
+}
+struct ID3D12SharingContract extends IUnknown {
+    static IID := "{0ADF7D52-929C-4E61-ADDB-FFED30DE66EF}"
+    Present(pResource, Subresource, window)
+      => ComCall(3, this.p, ID3D12Resource, pResource, UInt32, Subresource, HWND, window, "void")
+    SharedFenceSignal(pFence, FenceValue)
+      => ComCall(4, this.p, ID3D12Fence, pFence, Int64, FenceValue, "void")
+    BeginCapturableWork(guid)
+      => ComCall(5, this.p, GUID.Ptr, guid, "void")
+    EndCapturableWork(guid)
+      => ComCall(6, this.p, GUID.Ptr, guid, "void")
+}
+struct ID3D12ManualWriteTrackingResource extends IUnknown {
+    static IID := "{86CA3B85-49AD-4B6E-AED5-EDDB18540F41}"
+    TrackWrite(Subresource, pWrittenRange?)
+      => ComCall(3, this.p, UInt32, Subresource, D3D12_RANGE.Ptr, pWrittenRange?, "void")
+}
+struct D3D12_MESSAGE_CATEGORY extends Int32 {
+    static D3D12_MESSAGE_CATEGORY_APPLICATION_DEFINED := 0
+    static D3D12_MESSAGE_CATEGORY_MISCELLANEOUS := 1
+    static D3D12_MESSAGE_CATEGORY_INITIALIZATION := 2
+    static D3D12_MESSAGE_CATEGORY_CLEANUP := 3
+    static D3D12_MESSAGE_CATEGORY_COMPILATION := 4
+    static D3D12_MESSAGE_CATEGORY_STATE_CREATION := 5
+    static D3D12_MESSAGE_CATEGORY_STATE_SETTING := 6
+    static D3D12_MESSAGE_CATEGORY_STATE_GETTING := 7
+    static D3D12_MESSAGE_CATEGORY_RESOURCE_MANIPULATION := 8
+    static D3D12_MESSAGE_CATEGORY_EXECUTION := 9
+    static D3D12_MESSAGE_CATEGORY_SHADER := 10
+}
+struct D3D12_MESSAGE_SEVERITY extends Int32 {
+    static D3D12_MESSAGE_SEVERITY_CORRUPTION := 0
+    static D3D12_MESSAGE_SEVERITY_ERROR := 1
+    static D3D12_MESSAGE_SEVERITY_WARNING := 2
+    static D3D12_MESSAGE_SEVERITY_INFO := 3
+    static D3D12_MESSAGE_SEVERITY_MESSAGE := 4
+}
+struct D3D12_MESSAGE_ID extends Int32 {
+    static D3D12_MESSAGE_ID_UNKNOWN := 0
+    static D3D12_MESSAGE_ID_STRING_FROM_APPLICATION := 1
+    static D3D12_MESSAGE_ID_CORRUPTED_THIS := 2
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER1 := 3
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER2 := 4
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER3 := 5
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER4 := 6
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER5 := 7
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER6 := 8
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER7 := 9
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER8 := 10
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER9 := 11
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER10 := 12
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER11 := 13
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER12 := 14
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER13 := 15
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER14 := 16
+    static D3D12_MESSAGE_ID_CORRUPTED_PARAMETER15 := 17
+    static D3D12_MESSAGE_ID_CORRUPTED_MULTITHREADING := 18
+    static D3D12_MESSAGE_ID_MESSAGE_REPORTING_OUTOFMEMORY := 19
+    static D3D12_MESSAGE_ID_GETPRIVATEDATA_MOREDATA := 20
+    static D3D12_MESSAGE_ID_SETPRIVATEDATA_INVALIDFREEDATA := 21
+    static D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS := 24
+    static D3D12_MESSAGE_ID_SETPRIVATEDATA_OUTOFMEMORY := 25
+    static D3D12_MESSAGE_ID_CREATESHADERRESOURCEVIEW_UNRECOGNIZEDFORMAT := 26
+    static D3D12_MESSAGE_ID_CREATESHADERRESOURCEVIEW_INVALIDDESC := 27
+    static D3D12_MESSAGE_ID_CREATESHADERRESOURCEVIEW_INVALIDFORMAT := 28
+    static D3D12_MESSAGE_ID_CREATESHADERRESOURCEVIEW_INVALIDVIDEOPLANESLICE := 29
+    static D3D12_MESSAGE_ID_CREATESHADERRESOURCEVIEW_INVALIDPLANESLICE := 30
+    static D3D12_MESSAGE_ID_CREATESHADERRESOURCEVIEW_INVALIDDIMENSIONS := 31
+    static D3D12_MESSAGE_ID_CREATESHADERRESOURCEVIEW_INVALIDRESOURCE := 32
+    static D3D12_MESSAGE_ID_CREATERENDERTARGETVIEW_UNRECOGNIZEDFORMAT := 35
+    static D3D12_MESSAGE_ID_CREATERENDERTARGETVIEW_UNSUPPORTEDFORMAT := 36
+    static D3D12_MESSAGE_ID_CREATERENDERTARGETVIEW_INVALIDDESC := 37
+    static D3D12_MESSAGE_ID_CREATERENDERTARGETVIEW_INVALIDFORMAT := 38
+    static D3D12_MESSAGE_ID_CREATERENDERTARGETVIEW_INVALIDVIDEOPLANESLICE := 39
+    static D3D12_MESSAGE_ID_CREATERENDERTARGETVIEW_INVALIDPLANESLICE := 40
+    static D3D12_MESSAGE_ID_CREATERENDERTARGETVIEW_INVALIDDIMENSIONS := 41
+    static D3D12_MESSAGE_ID_CREATERENDERTARGETVIEW_INVALIDRESOURCE := 42
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILVIEW_UNRECOGNIZEDFORMAT := 45
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILVIEW_INVALIDDESC := 46
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILVIEW_INVALIDFORMAT := 47
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILVIEW_INVALIDDIMENSIONS := 48
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILVIEW_INVALIDRESOURCE := 49
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_OUTOFMEMORY := 52
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_TOOMANYELEMENTS := 53
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_INVALIDFORMAT := 54
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_INCOMPATIBLEFORMAT := 55
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_INVALIDSLOT := 56
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_INVALIDINPUTSLOTCLASS := 57
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_STEPRATESLOTCLASSMISMATCH := 58
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_INVALIDSLOTCLASSCHANGE := 59
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_INVALIDSTEPRATECHANGE := 60
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_INVALIDALIGNMENT := 61
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_DUPLICATESEMANTIC := 62
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_UNPARSEABLEINPUTSIGNATURE := 63
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_NULLSEMANTIC := 64
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_MISSINGELEMENT := 65
+    static D3D12_MESSAGE_ID_CREATEVERTEXSHADER_OUTOFMEMORY := 66
+    static D3D12_MESSAGE_ID_CREATEVERTEXSHADER_INVALIDSHADERBYTECODE := 67
+    static D3D12_MESSAGE_ID_CREATEVERTEXSHADER_INVALIDSHADERTYPE := 68
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADER_OUTOFMEMORY := 69
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADER_INVALIDSHADERBYTECODE := 70
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADER_INVALIDSHADERTYPE := 71
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_OUTOFMEMORY := 72
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDSHADERBYTECODE := 73
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDSHADERTYPE := 74
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDNUMENTRIES := 75
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_OUTPUTSTREAMSTRIDEUNUSED := 76
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_OUTPUTSLOT0EXPECTED := 79
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDOUTPUTSLOT := 80
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_ONLYONEELEMENTPERSLOT := 81
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDCOMPONENTCOUNT := 82
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDSTARTCOMPONENTANDCOMPONENTCOUNT := 83
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDGAPDEFINITION := 84
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_REPEATEDOUTPUT := 85
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDOUTPUTSTREAMSTRIDE := 86
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_MISSINGSEMANTIC := 87
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_MASKMISMATCH := 88
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_CANTHAVEONLYGAPS := 89
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_DECLTOOCOMPLEX := 90
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_MISSINGOUTPUTSIGNATURE := 91
+    static D3D12_MESSAGE_ID_CREATEPIXELSHADER_OUTOFMEMORY := 92
+    static D3D12_MESSAGE_ID_CREATEPIXELSHADER_INVALIDSHADERBYTECODE := 93
+    static D3D12_MESSAGE_ID_CREATEPIXELSHADER_INVALIDSHADERTYPE := 94
+    static D3D12_MESSAGE_ID_CREATERASTERIZERSTATE_INVALIDFILLMODE := 95
+    static D3D12_MESSAGE_ID_CREATERASTERIZERSTATE_INVALIDCULLMODE := 96
+    static D3D12_MESSAGE_ID_CREATERASTERIZERSTATE_INVALIDDEPTHBIASCLAMP := 97
+    static D3D12_MESSAGE_ID_CREATERASTERIZERSTATE_INVALIDSLOPESCALEDDEPTHBIAS := 98
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDDEPTHWRITEMASK := 100
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDDEPTHFUNC := 101
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDFRONTFACESTENCILFAILOP := 102
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDFRONTFACESTENCILZFAILOP := 103
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDFRONTFACESTENCILPASSOP := 104
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDFRONTFACESTENCILFUNC := 105
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDBACKFACESTENCILFAILOP := 106
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDBACKFACESTENCILZFAILOP := 107
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDBACKFACESTENCILPASSOP := 108
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INVALIDBACKFACESTENCILFUNC := 109
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_INVALIDSRCBLEND := 111
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_INVALIDDESTBLEND := 112
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_INVALIDBLENDOP := 113
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_INVALIDSRCBLENDALPHA := 114
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_INVALIDDESTBLENDALPHA := 115
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_INVALIDBLENDOPALPHA := 116
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_INVALIDRENDERTARGETWRITEMASK := 117
+    static D3D12_MESSAGE_ID_GET_PROGRAM_IDENTIFIER_ERROR := 118
+    static D3D12_MESSAGE_ID_GET_WORK_GRAPH_PROPERTIES_ERROR := 119
+    static D3D12_MESSAGE_ID_SET_PROGRAM_ERROR := 120
+    static D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_INVALID := 135
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_ROOT_SIGNATURE_NOT_SET := 200
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_ROOT_SIGNATURE_MISMATCH := 201
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_VERTEX_BUFFER_NOT_SET := 202
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_VERTEX_BUFFER_STRIDE_TOO_SMALL := 209
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_VERTEX_BUFFER_TOO_SMALL := 210
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_INDEX_BUFFER_NOT_SET := 211
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_INDEX_BUFFER_FORMAT_INVALID := 212
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_INDEX_BUFFER_TOO_SMALL := 213
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_INVALID_PRIMITIVETOPOLOGY := 219
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_VERTEX_STRIDE_UNALIGNED := 221
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_INDEX_OFFSET_UNALIGNED := 222
+    static D3D12_MESSAGE_ID_DEVICE_REMOVAL_PROCESS_AT_FAULT := 232
+    static D3D12_MESSAGE_ID_DEVICE_REMOVAL_PROCESS_POSSIBLY_AT_FAULT := 233
+    static D3D12_MESSAGE_ID_DEVICE_REMOVAL_PROCESS_NOT_AT_FAULT := 234
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_TRAILING_DIGIT_IN_SEMANTIC := 239
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_TRAILING_DIGIT_IN_SEMANTIC := 240
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_TYPE_MISMATCH := 245
+    static D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_EMPTY_LAYOUT := 253
+    static D3D12_MESSAGE_ID_LIVE_OBJECT_SUMMARY := 255
+    static D3D12_MESSAGE_ID_LIVE_DEVICE := 274
+    static D3D12_MESSAGE_ID_LIVE_SWAPCHAIN := 275
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILVIEW_INVALIDFLAGS := 276
+    static D3D12_MESSAGE_ID_CREATEVERTEXSHADER_INVALIDCLASSLINKAGE := 277
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADER_INVALIDCLASSLINKAGE := 278
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDSTREAMTORASTERIZER := 280
+    static D3D12_MESSAGE_ID_CREATEPIXELSHADER_INVALIDCLASSLINKAGE := 283
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDSTREAM := 284
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_UNEXPECTEDENTRIES := 285
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_UNEXPECTEDSTRIDES := 286
+    static D3D12_MESSAGE_ID_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_INVALIDNUMSTRIDES := 287
+    static D3D12_MESSAGE_ID_CREATEHULLSHADER_OUTOFMEMORY := 289
+    static D3D12_MESSAGE_ID_CREATEHULLSHADER_INVALIDSHADERBYTECODE := 290
+    static D3D12_MESSAGE_ID_CREATEHULLSHADER_INVALIDSHADERTYPE := 291
+    static D3D12_MESSAGE_ID_CREATEHULLSHADER_INVALIDCLASSLINKAGE := 292
+    static D3D12_MESSAGE_ID_CREATEDOMAINSHADER_OUTOFMEMORY := 294
+    static D3D12_MESSAGE_ID_CREATEDOMAINSHADER_INVALIDSHADERBYTECODE := 295
+    static D3D12_MESSAGE_ID_CREATEDOMAINSHADER_INVALIDSHADERTYPE := 296
+    static D3D12_MESSAGE_ID_CREATEDOMAINSHADER_INVALIDCLASSLINKAGE := 297
+    static D3D12_MESSAGE_ID_RESOURCE_UNMAP_NOTMAPPED := 310
+    static D3D12_MESSAGE_ID_DEVICE_CHECKFEATURESUPPORT_MISMATCHED_DATA_SIZE := 318
+    static D3D12_MESSAGE_ID_CREATECOMPUTESHADER_OUTOFMEMORY := 321
+    static D3D12_MESSAGE_ID_CREATECOMPUTESHADER_INVALIDSHADERBYTECODE := 322
+    static D3D12_MESSAGE_ID_CREATECOMPUTESHADER_INVALIDCLASSLINKAGE := 323
+    static D3D12_MESSAGE_ID_DEVICE_CREATEVERTEXSHADER_DOUBLEFLOATOPSNOTSUPPORTED := 331
+    static D3D12_MESSAGE_ID_DEVICE_CREATEHULLSHADER_DOUBLEFLOATOPSNOTSUPPORTED := 332
+    static D3D12_MESSAGE_ID_DEVICE_CREATEDOMAINSHADER_DOUBLEFLOATOPSNOTSUPPORTED := 333
+    static D3D12_MESSAGE_ID_DEVICE_CREATEGEOMETRYSHADER_DOUBLEFLOATOPSNOTSUPPORTED := 334
+    static D3D12_MESSAGE_ID_DEVICE_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_DOUBLEFLOATOPSNOTSUPPORTED := 335
+    static D3D12_MESSAGE_ID_DEVICE_CREATEPIXELSHADER_DOUBLEFLOATOPSNOTSUPPORTED := 336
+    static D3D12_MESSAGE_ID_DEVICE_CREATECOMPUTESHADER_DOUBLEFLOATOPSNOTSUPPORTED := 337
+    static D3D12_MESSAGE_ID_CREATEUNORDEREDACCESSVIEW_INVALIDRESOURCE := 340
+    static D3D12_MESSAGE_ID_CREATEUNORDEREDACCESSVIEW_INVALIDDESC := 341
+    static D3D12_MESSAGE_ID_CREATEUNORDEREDACCESSVIEW_INVALIDFORMAT := 342
+    static D3D12_MESSAGE_ID_CREATEUNORDEREDACCESSVIEW_INVALIDVIDEOPLANESLICE := 343
+    static D3D12_MESSAGE_ID_CREATEUNORDEREDACCESSVIEW_INVALIDPLANESLICE := 344
+    static D3D12_MESSAGE_ID_CREATEUNORDEREDACCESSVIEW_INVALIDDIMENSIONS := 345
+    static D3D12_MESSAGE_ID_CREATEUNORDEREDACCESSVIEW_UNRECOGNIZEDFORMAT := 346
+    static D3D12_MESSAGE_ID_CREATEUNORDEREDACCESSVIEW_INVALIDFLAGS := 354
+    static D3D12_MESSAGE_ID_CREATERASTERIZERSTATE_INVALIDFORCEDSAMPLECOUNT := 401
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_INVALIDLOGICOPS := 403
+    static D3D12_MESSAGE_ID_DEVICE_CREATEVERTEXSHADER_DOUBLEEXTENSIONSNOTSUPPORTED := 410
+    static D3D12_MESSAGE_ID_DEVICE_CREATEHULLSHADER_DOUBLEEXTENSIONSNOTSUPPORTED := 412
+    static D3D12_MESSAGE_ID_DEVICE_CREATEDOMAINSHADER_DOUBLEEXTENSIONSNOTSUPPORTED := 414
+    static D3D12_MESSAGE_ID_DEVICE_CREATEGEOMETRYSHADER_DOUBLEEXTENSIONSNOTSUPPORTED := 416
+    static D3D12_MESSAGE_ID_DEVICE_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_DOUBLEEXTENSIONSNOTSUPPORTED := 418
+    static D3D12_MESSAGE_ID_DEVICE_CREATEPIXELSHADER_DOUBLEEXTENSIONSNOTSUPPORTED := 420
+    static D3D12_MESSAGE_ID_DEVICE_CREATECOMPUTESHADER_DOUBLEEXTENSIONSNOTSUPPORTED := 422
+    static D3D12_MESSAGE_ID_DEVICE_CREATEVERTEXSHADER_UAVSNOTSUPPORTED := 425
+    static D3D12_MESSAGE_ID_DEVICE_CREATEHULLSHADER_UAVSNOTSUPPORTED := 426
+    static D3D12_MESSAGE_ID_DEVICE_CREATEDOMAINSHADER_UAVSNOTSUPPORTED := 427
+    static D3D12_MESSAGE_ID_DEVICE_CREATEGEOMETRYSHADER_UAVSNOTSUPPORTED := 428
+    static D3D12_MESSAGE_ID_DEVICE_CREATEGEOMETRYSHADERWITHSTREAMOUTPUT_UAVSNOTSUPPORTED := 429
+    static D3D12_MESSAGE_ID_DEVICE_CREATEPIXELSHADER_UAVSNOTSUPPORTED := 430
+    static D3D12_MESSAGE_ID_DEVICE_CREATECOMPUTESHADER_UAVSNOTSUPPORTED := 431
+    static D3D12_MESSAGE_ID_DEVICE_CLEARVIEW_INVALIDSOURCERECT := 447
+    static D3D12_MESSAGE_ID_DEVICE_CLEARVIEW_EMPTYRECT := 448
+    static D3D12_MESSAGE_ID_UPDATETILEMAPPINGS_INVALID_PARAMETER := 493
+    static D3D12_MESSAGE_ID_COPYTILEMAPPINGS_INVALID_PARAMETER := 494
+    static D3D12_MESSAGE_ID_CREATEDEVICE_INVALIDARGS := 506
+    static D3D12_MESSAGE_ID_CREATEDEVICE_WARNING := 507
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_TYPE := 519
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_NULL_POINTER := 520
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_SUBRESOURCE := 521
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_RESERVED_BITS := 522
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISSING_BIND_FLAGS := 523
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_MISC_FLAGS := 524
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_MATCHING_STATES := 525
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_COMBINATION := 526
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_BEFORE_AFTER_MISMATCH := 527
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_RESOURCE := 528
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_SAMPLE_COUNT := 529
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_FLAGS := 530
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_COMBINED_FLAGS := 531
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_FLAGS_FOR_FORMAT := 532
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_SPLIT_BARRIER := 533
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_UNMATCHED_END := 534
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_UNMATCHED_BEGIN := 535
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_FLAG := 536
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_COMMAND_LIST_TYPE := 537
+    static D3D12_MESSAGE_ID_INVALID_SUBRESOURCE_STATE := 538
+    static D3D12_MESSAGE_ID_COMMAND_ALLOCATOR_CONTENTION := 540
+    static D3D12_MESSAGE_ID_COMMAND_ALLOCATOR_RESET := 541
+    static D3D12_MESSAGE_ID_COMMAND_ALLOCATOR_RESET_BUNDLE := 542
+    static D3D12_MESSAGE_ID_COMMAND_ALLOCATOR_CANNOT_RESET := 543
+    static D3D12_MESSAGE_ID_COMMAND_LIST_OPEN := 544
+    static D3D12_MESSAGE_ID_INVALID_BUNDLE_API := 546
+    static D3D12_MESSAGE_ID_COMMAND_LIST_CLOSED := 547
+    static D3D12_MESSAGE_ID_WRONG_COMMAND_ALLOCATOR_TYPE := 549
+    static D3D12_MESSAGE_ID_COMMAND_ALLOCATOR_SYNC := 552
+    static D3D12_MESSAGE_ID_COMMAND_LIST_SYNC := 553
+    static D3D12_MESSAGE_ID_SET_DESCRIPTOR_HEAP_INVALID := 554
+    static D3D12_MESSAGE_ID_CREATE_COMMANDQUEUE := 557
+    static D3D12_MESSAGE_ID_CREATE_COMMANDALLOCATOR := 558
+    static D3D12_MESSAGE_ID_CREATE_PIPELINESTATE := 559
+    static D3D12_MESSAGE_ID_CREATE_COMMANDLIST12 := 560
+    static D3D12_MESSAGE_ID_CREATE_RESOURCE := 562
+    static D3D12_MESSAGE_ID_CREATE_DESCRIPTORHEAP := 563
+    static D3D12_MESSAGE_ID_CREATE_ROOTSIGNATURE := 564
+    static D3D12_MESSAGE_ID_CREATE_LIBRARY := 565
+    static D3D12_MESSAGE_ID_CREATE_HEAP := 566
+    static D3D12_MESSAGE_ID_CREATE_MONITOREDFENCE := 567
+    static D3D12_MESSAGE_ID_CREATE_QUERYHEAP := 568
+    static D3D12_MESSAGE_ID_CREATE_COMMANDSIGNATURE := 569
+    static D3D12_MESSAGE_ID_LIVE_COMMANDQUEUE := 570
+    static D3D12_MESSAGE_ID_LIVE_COMMANDALLOCATOR := 571
+    static D3D12_MESSAGE_ID_LIVE_PIPELINESTATE := 572
+    static D3D12_MESSAGE_ID_LIVE_COMMANDLIST12 := 573
+    static D3D12_MESSAGE_ID_LIVE_RESOURCE := 575
+    static D3D12_MESSAGE_ID_LIVE_DESCRIPTORHEAP := 576
+    static D3D12_MESSAGE_ID_LIVE_ROOTSIGNATURE := 577
+    static D3D12_MESSAGE_ID_LIVE_LIBRARY := 578
+    static D3D12_MESSAGE_ID_LIVE_HEAP := 579
+    static D3D12_MESSAGE_ID_LIVE_MONITOREDFENCE := 580
+    static D3D12_MESSAGE_ID_LIVE_QUERYHEAP := 581
+    static D3D12_MESSAGE_ID_LIVE_COMMANDSIGNATURE := 582
+    static D3D12_MESSAGE_ID_DESTROY_COMMANDQUEUE := 583
+    static D3D12_MESSAGE_ID_DESTROY_COMMANDALLOCATOR := 584
+    static D3D12_MESSAGE_ID_DESTROY_PIPELINESTATE := 585
+    static D3D12_MESSAGE_ID_DESTROY_COMMANDLIST12 := 586
+    static D3D12_MESSAGE_ID_DESTROY_RESOURCE := 588
+    static D3D12_MESSAGE_ID_DESTROY_DESCRIPTORHEAP := 589
+    static D3D12_MESSAGE_ID_DESTROY_ROOTSIGNATURE := 590
+    static D3D12_MESSAGE_ID_DESTROY_LIBRARY := 591
+    static D3D12_MESSAGE_ID_DESTROY_HEAP := 592
+    static D3D12_MESSAGE_ID_DESTROY_MONITOREDFENCE := 593
+    static D3D12_MESSAGE_ID_DESTROY_QUERYHEAP := 594
+    static D3D12_MESSAGE_ID_DESTROY_COMMANDSIGNATURE := 595
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDDIMENSIONS := 597
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDMISCFLAGS := 599
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDARG_RETURN := 602
+    static D3D12_MESSAGE_ID_CREATERESOURCE_OUTOFMEMORY_RETURN := 603
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDDESC := 604
+    static D3D12_MESSAGE_ID_POSSIBLY_INVALID_SUBRESOURCE_STATE := 607
+    static D3D12_MESSAGE_ID_INVALID_USE_OF_NON_RESIDENT_RESOURCE := 608
+    static D3D12_MESSAGE_ID_POSSIBLE_INVALID_USE_OF_NON_RESIDENT_RESOURCE := 609
+    static D3D12_MESSAGE_ID_BUNDLE_PIPELINE_STATE_MISMATCH := 610
+    static D3D12_MESSAGE_ID_PRIMITIVE_TOPOLOGY_MISMATCH_PIPELINE_STATE := 611
+    static D3D12_MESSAGE_ID_RENDER_TARGET_FORMAT_MISMATCH_PIPELINE_STATE := 613
+    static D3D12_MESSAGE_ID_RENDER_TARGET_SAMPLE_DESC_MISMATCH_PIPELINE_STATE := 614
+    static D3D12_MESSAGE_ID_DEPTH_STENCIL_FORMAT_MISMATCH_PIPELINE_STATE := 615
+    static D3D12_MESSAGE_ID_DEPTH_STENCIL_SAMPLE_DESC_MISMATCH_PIPELINE_STATE := 616
+    static D3D12_MESSAGE_ID_CREATESHADER_INVALIDBYTECODE := 622
+    static D3D12_MESSAGE_ID_CREATEHEAP_NULLDESC := 623
+    static D3D12_MESSAGE_ID_CREATEHEAP_INVALIDSIZE := 624
+    static D3D12_MESSAGE_ID_CREATEHEAP_UNRECOGNIZEDHEAPTYPE := 625
+    static D3D12_MESSAGE_ID_CREATEHEAP_UNRECOGNIZEDCPUPAGEPROPERTIES := 626
+    static D3D12_MESSAGE_ID_CREATEHEAP_UNRECOGNIZEDMEMORYPOOL := 627
+    static D3D12_MESSAGE_ID_CREATEHEAP_INVALIDPROPERTIES := 628
+    static D3D12_MESSAGE_ID_CREATEHEAP_INVALIDALIGNMENT := 629
+    static D3D12_MESSAGE_ID_CREATEHEAP_UNRECOGNIZEDMISCFLAGS := 630
+    static D3D12_MESSAGE_ID_CREATEHEAP_INVALIDMISCFLAGS := 631
+    static D3D12_MESSAGE_ID_CREATEHEAP_INVALIDARG_RETURN := 632
+    static D3D12_MESSAGE_ID_CREATEHEAP_OUTOFMEMORY_RETURN := 633
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_NULLHEAPPROPERTIES := 634
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_UNRECOGNIZEDHEAPTYPE := 635
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_UNRECOGNIZEDCPUPAGEPROPERTIES := 636
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_UNRECOGNIZEDMEMORYPOOL := 637
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_INVALIDHEAPPROPERTIES := 638
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_UNRECOGNIZEDHEAPMISCFLAGS := 639
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_INVALIDHEAPMISCFLAGS := 640
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_INVALIDARG_RETURN := 641
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_OUTOFMEMORY_RETURN := 642
+    static D3D12_MESSAGE_ID_GETCUSTOMHEAPPROPERTIES_UNRECOGNIZEDHEAPTYPE := 643
+    static D3D12_MESSAGE_ID_GETCUSTOMHEAPPROPERTIES_INVALIDHEAPTYPE := 644
+    static D3D12_MESSAGE_ID_CREATE_DESCRIPTOR_HEAP_INVALID_DESC := 645
+    static D3D12_MESSAGE_ID_INVALID_DESCRIPTOR_HANDLE := 646
+    static D3D12_MESSAGE_ID_CREATERASTERIZERSTATE_INVALID_CONSERVATIVERASTERMODE := 647
+    static D3D12_MESSAGE_ID_CREATE_CONSTANT_BUFFER_VIEW_INVALID_RESOURCE := 649
+    static D3D12_MESSAGE_ID_CREATE_CONSTANT_BUFFER_VIEW_INVALID_DESC := 650
+    static D3D12_MESSAGE_ID_CREATE_UNORDEREDACCESS_VIEW_INVALID_COUNTER_USAGE := 652
+    static D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES := 653
+    static D3D12_MESSAGE_ID_COPY_DESCRIPTORS_WRITE_ONLY_DESCRIPTOR := 654
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_RTV_FORMAT_NOT_UNKNOWN := 655
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_INVALID_RENDER_TARGET_COUNT := 656
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_VERTEX_SHADER_NOT_SET := 657
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_INPUTLAYOUT_NOT_SET := 658
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_SHADER_LINKAGE_HS_DS_SIGNATURE_MISMATCH := 659
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_SHADER_LINKAGE_REGISTERINDEX := 660
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_SHADER_LINKAGE_COMPONENTTYPE := 661
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_SHADER_LINKAGE_REGISTERMASK := 662
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_SHADER_LINKAGE_SYSTEMVALUE := 663
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_SHADER_LINKAGE_NEVERWRITTEN_ALWAYSREADS := 664
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_SHADER_LINKAGE_MINPRECISION := 665
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_SHADER_LINKAGE_SEMANTICNAME_NOT_FOUND := 666
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_HS_XOR_DS_MISMATCH := 667
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_HULL_SHADER_INPUT_TOPOLOGY_MISMATCH := 668
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_HS_DS_CONTROL_POINT_COUNT_MISMATCH := 669
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_HS_DS_TESSELLATOR_DOMAIN_MISMATCH := 670
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_INVALID_USE_OF_CENTER_MULTISAMPLE_PATTERN := 671
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_INVALID_USE_OF_FORCED_SAMPLE_COUNT := 672
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_INVALID_PRIMITIVETOPOLOGY := 673
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_INVALID_SYSTEMVALUE := 674
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_OM_DUAL_SOURCE_BLENDING_CAN_ONLY_HAVE_RENDER_TARGET_0 := 675
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_OM_RENDER_TARGET_DOES_NOT_SUPPORT_BLENDING := 676
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_PS_OUTPUT_TYPE_MISMATCH := 677
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_OM_RENDER_TARGET_DOES_NOT_SUPPORT_LOGIC_OPS := 678
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_RENDERTARGETVIEW_NOT_SET := 679
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_DEPTHSTENCILVIEW_NOT_SET := 680
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_GS_INPUT_PRIMITIVE_MISMATCH := 681
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_POSITION_NOT_PRESENT := 682
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_MISSING_ROOT_SIGNATURE_FLAGS := 683
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_INVALID_INDEX_BUFFER_PROPERTIES := 684
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_INVALID_SAMPLE_DESC := 685
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_HS_ROOT_SIGNATURE_MISMATCH := 686
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_DS_ROOT_SIGNATURE_MISMATCH := 687
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_VS_ROOT_SIGNATURE_MISMATCH := 688
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_GS_ROOT_SIGNATURE_MISMATCH := 689
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_PS_ROOT_SIGNATURE_MISMATCH := 690
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_MISSING_ROOT_SIGNATURE := 691
+    static D3D12_MESSAGE_ID_EXECUTE_BUNDLE_OPEN_BUNDLE := 692
+    static D3D12_MESSAGE_ID_EXECUTE_BUNDLE_DESCRIPTOR_HEAP_MISMATCH := 693
+    static D3D12_MESSAGE_ID_EXECUTE_BUNDLE_TYPE := 694
+    static D3D12_MESSAGE_ID_DRAW_EMPTY_SCISSOR_RECTANGLE := 695
+    static D3D12_MESSAGE_ID_CREATE_ROOT_SIGNATURE_BLOB_NOT_FOUND := 696
+    static D3D12_MESSAGE_ID_CREATE_ROOT_SIGNATURE_DESERIALIZE_FAILED := 697
+    static D3D12_MESSAGE_ID_CREATE_ROOT_SIGNATURE_INVALID_CONFIGURATION := 698
+    static D3D12_MESSAGE_ID_CREATE_ROOT_SIGNATURE_NOT_SUPPORTED_ON_DEVICE := 699
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_NULLRESOURCEPROPERTIES := 700
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_NULLHEAP := 701
+    static D3D12_MESSAGE_ID_GETRESOURCEALLOCATIONINFO_INVALIDRDESCS := 702
+    static D3D12_MESSAGE_ID_MAKERESIDENT_NULLOBJECTARRAY := 703
+    static D3D12_MESSAGE_ID_EVICT_NULLOBJECTARRAY := 705
+    static D3D12_MESSAGE_ID_SET_DESCRIPTOR_TABLE_INVALID := 708
+    static D3D12_MESSAGE_ID_SET_ROOT_CONSTANT_INVALID := 709
+    static D3D12_MESSAGE_ID_SET_ROOT_CONSTANT_BUFFER_VIEW_INVALID := 710
+    static D3D12_MESSAGE_ID_SET_ROOT_SHADER_RESOURCE_VIEW_INVALID := 711
+    static D3D12_MESSAGE_ID_SET_ROOT_UNORDERED_ACCESS_VIEW_INVALID := 712
+    static D3D12_MESSAGE_ID_SET_VERTEX_BUFFERS_INVALID_DESC := 713
+    static D3D12_MESSAGE_ID_SET_INDEX_BUFFER_INVALID_DESC := 715
+    static D3D12_MESSAGE_ID_SET_STREAM_OUTPUT_BUFFERS_INVALID_DESC := 717
+    static D3D12_MESSAGE_ID_CREATERESOURCE_UNRECOGNIZEDDIMENSIONALITY := 718
+    static D3D12_MESSAGE_ID_CREATERESOURCE_UNRECOGNIZEDLAYOUT := 719
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDDIMENSIONALITY := 720
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT := 721
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDMIPLEVELS := 722
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDSAMPLEDESC := 723
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDLAYOUT := 724
+    static D3D12_MESSAGE_ID_SET_INDEX_BUFFER_INVALID := 725
+    static D3D12_MESSAGE_ID_SET_VERTEX_BUFFERS_INVALID := 726
+    static D3D12_MESSAGE_ID_SET_STREAM_OUTPUT_BUFFERS_INVALID := 727
+    static D3D12_MESSAGE_ID_SET_RENDER_TARGETS_INVALID := 728
+    static D3D12_MESSAGE_ID_CREATEQUERY_HEAP_INVALID_PARAMETERS := 729
+    static D3D12_MESSAGE_ID_BEGIN_END_QUERY_INVALID_PARAMETERS := 731
+    static D3D12_MESSAGE_ID_CLOSE_COMMAND_LIST_OPEN_QUERY := 732
+    static D3D12_MESSAGE_ID_RESOLVE_QUERY_DATA_INVALID_PARAMETERS := 733
+    static D3D12_MESSAGE_ID_SET_PREDICATION_INVALID_PARAMETERS := 734
+    static D3D12_MESSAGE_ID_TIMESTAMPS_NOT_SUPPORTED := 735
+    static D3D12_MESSAGE_ID_CREATERESOURCE_UNRECOGNIZEDFORMAT := 737
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDFORMAT := 738
+    static D3D12_MESSAGE_ID_GETCOPYABLEFOOTPRINTS_INVALIDSUBRESOURCERANGE := 739
+    static D3D12_MESSAGE_ID_GETCOPYABLEFOOTPRINTS_INVALIDBASEOFFSET := 740
+    static D3D12_MESSAGE_ID_GETCOPYABLELAYOUT_INVALIDSUBRESOURCERANGE := 739
+    static D3D12_MESSAGE_ID_GETCOPYABLELAYOUT_INVALIDBASEOFFSET := 740
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_INVALID_HEAP := 741
+    static D3D12_MESSAGE_ID_CREATE_SAMPLER_INVALID := 742
+    static D3D12_MESSAGE_ID_CREATECOMMANDSIGNATURE_INVALID := 743
+    static D3D12_MESSAGE_ID_EXECUTE_INDIRECT_INVALID_PARAMETERS := 744
+    static D3D12_MESSAGE_ID_GETGPUVIRTUALADDRESS_INVALID_RESOURCE_DIMENSION := 745
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDCLEARVALUE := 815
+    static D3D12_MESSAGE_ID_CREATERESOURCE_UNRECOGNIZEDCLEARVALUEFORMAT := 816
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDCLEARVALUEFORMAT := 817
+    static D3D12_MESSAGE_ID_CREATERESOURCE_CLEARVALUEDENORMFLUSH := 818
+    static D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE := 820
+    static D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE := 821
+    static D3D12_MESSAGE_ID_MAP_INVALIDHEAP := 822
+    static D3D12_MESSAGE_ID_UNMAP_INVALIDHEAP := 823
+    static D3D12_MESSAGE_ID_MAP_INVALIDRESOURCE := 824
+    static D3D12_MESSAGE_ID_UNMAP_INVALIDRESOURCE := 825
+    static D3D12_MESSAGE_ID_MAP_INVALIDSUBRESOURCE := 826
+    static D3D12_MESSAGE_ID_UNMAP_INVALIDSUBRESOURCE := 827
+    static D3D12_MESSAGE_ID_MAP_INVALIDRANGE := 828
+    static D3D12_MESSAGE_ID_UNMAP_INVALIDRANGE := 829
+    static D3D12_MESSAGE_ID_MAP_INVALIDDATAPOINTER := 832
+    static D3D12_MESSAGE_ID_MAP_INVALIDARG_RETURN := 833
+    static D3D12_MESSAGE_ID_MAP_OUTOFMEMORY_RETURN := 834
+    static D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_BUNDLENOTSUPPORTED := 835
+    static D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_COMMANDLISTMISMATCH := 836
+    static D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_OPENCOMMANDLIST := 837
+    static D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_FAILEDCOMMANDLIST := 838
+    static D3D12_MESSAGE_ID_COPYBUFFERREGION_NULLDST := 839
+    static D3D12_MESSAGE_ID_COPYBUFFERREGION_INVALIDDSTRESOURCEDIMENSION := 840
+    static D3D12_MESSAGE_ID_COPYBUFFERREGION_DSTRANGEOUTOFBOUNDS := 841
+    static D3D12_MESSAGE_ID_COPYBUFFERREGION_NULLSRC := 842
+    static D3D12_MESSAGE_ID_COPYBUFFERREGION_INVALIDSRCRESOURCEDIMENSION := 843
+    static D3D12_MESSAGE_ID_COPYBUFFERREGION_SRCRANGEOUTOFBOUNDS := 844
+    static D3D12_MESSAGE_ID_COPYBUFFERREGION_INVALIDCOPYFLAGS := 845
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_NULLDST := 846
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_UNRECOGNIZEDDSTTYPE := 847
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTRESOURCEDIMENSION := 848
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTRESOURCE := 849
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTSUBRESOURCE := 850
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTOFFSET := 851
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_UNRECOGNIZEDDSTFORMAT := 852
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTFORMAT := 853
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTDIMENSIONS := 854
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTROWPITCH := 855
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTPLACEMENT := 856
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTDSPLACEDFOOTPRINTFORMAT := 857
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_DSTREGIONOUTOFBOUNDS := 858
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_NULLSRC := 859
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_UNRECOGNIZEDSRCTYPE := 860
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCRESOURCEDIMENSION := 861
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCRESOURCE := 862
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCSUBRESOURCE := 863
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCOFFSET := 864
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_UNRECOGNIZEDSRCFORMAT := 865
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCFORMAT := 866
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCDIMENSIONS := 867
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCROWPITCH := 868
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCPLACEMENT := 869
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCDSPLACEDFOOTPRINTFORMAT := 870
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_SRCREGIONOUTOFBOUNDS := 871
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDDSTCOORDINATES := 872
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDSRCBOX := 873
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_FORMATMISMATCH := 874
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_EMPTYBOX := 875
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_INVALIDCOPYFLAGS := 876
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_INVALID_SUBRESOURCE_INDEX := 877
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_INVALID_FORMAT := 878
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_RESOURCE_MISMATCH := 879
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_INVALID_SAMPLE_COUNT := 880
+    static D3D12_MESSAGE_ID_CREATECOMPUTEPIPELINESTATE_INVALID_SHADER := 881
+    static D3D12_MESSAGE_ID_CREATECOMPUTEPIPELINESTATE_CS_ROOT_SIGNATURE_MISMATCH := 882
+    static D3D12_MESSAGE_ID_CREATECOMPUTEPIPELINESTATE_MISSING_ROOT_SIGNATURE := 883
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_INVALIDCACHEDBLOB := 884
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBADAPTERMISMATCH := 885
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDRIVERVERSIONMISMATCH := 886
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH := 887
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBIGNORED := 888
+    static D3D12_MESSAGE_ID_WRITETOSUBRESOURCE_INVALIDHEAP := 889
+    static D3D12_MESSAGE_ID_WRITETOSUBRESOURCE_INVALIDRESOURCE := 890
+    static D3D12_MESSAGE_ID_WRITETOSUBRESOURCE_INVALIDBOX := 891
+    static D3D12_MESSAGE_ID_WRITETOSUBRESOURCE_INVALIDSUBRESOURCE := 892
+    static D3D12_MESSAGE_ID_WRITETOSUBRESOURCE_EMPTYBOX := 893
+    static D3D12_MESSAGE_ID_READFROMSUBRESOURCE_INVALIDHEAP := 894
+    static D3D12_MESSAGE_ID_READFROMSUBRESOURCE_INVALIDRESOURCE := 895
+    static D3D12_MESSAGE_ID_READFROMSUBRESOURCE_INVALIDBOX := 896
+    static D3D12_MESSAGE_ID_READFROMSUBRESOURCE_INVALIDSUBRESOURCE := 897
+    static D3D12_MESSAGE_ID_READFROMSUBRESOURCE_EMPTYBOX := 898
+    static D3D12_MESSAGE_ID_TOO_MANY_NODES_SPECIFIED := 899
+    static D3D12_MESSAGE_ID_INVALID_NODE_INDEX := 900
+    static D3D12_MESSAGE_ID_GETHEAPPROPERTIES_INVALIDRESOURCE := 901
+    static D3D12_MESSAGE_ID_NODE_MASK_MISMATCH := 902
+    static D3D12_MESSAGE_ID_COMMAND_LIST_OUTOFMEMORY := 903
+    static D3D12_MESSAGE_ID_COMMAND_LIST_MULTIPLE_SWAPCHAIN_BUFFER_REFERENCES := 904
+    static D3D12_MESSAGE_ID_COMMAND_LIST_TOO_MANY_SWAPCHAIN_REFERENCES := 905
+    static D3D12_MESSAGE_ID_COMMAND_QUEUE_TOO_MANY_SWAPCHAIN_REFERENCES := 906
+    static D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE := 907
+    static D3D12_MESSAGE_ID_COMMAND_LIST_SETRENDERTARGETS_INVALIDNUMRENDERTARGETS := 908
+    static D3D12_MESSAGE_ID_CREATE_QUEUE_INVALID_TYPE := 909
+    static D3D12_MESSAGE_ID_CREATE_QUEUE_INVALID_FLAGS := 910
+    static D3D12_MESSAGE_ID_CREATESHAREDRESOURCE_INVALIDFLAGS := 911
+    static D3D12_MESSAGE_ID_CREATESHAREDRESOURCE_INVALIDFORMAT := 912
+    static D3D12_MESSAGE_ID_CREATESHAREDHEAP_INVALIDFLAGS := 913
+    static D3D12_MESSAGE_ID_REFLECTSHAREDPROPERTIES_UNRECOGNIZEDPROPERTIES := 914
+    static D3D12_MESSAGE_ID_REFLECTSHAREDPROPERTIES_INVALIDSIZE := 915
+    static D3D12_MESSAGE_ID_REFLECTSHAREDPROPERTIES_INVALIDOBJECT := 916
+    static D3D12_MESSAGE_ID_KEYEDMUTEX_INVALIDOBJECT := 917
+    static D3D12_MESSAGE_ID_KEYEDMUTEX_INVALIDKEY := 918
+    static D3D12_MESSAGE_ID_KEYEDMUTEX_WRONGSTATE := 919
+    static D3D12_MESSAGE_ID_CREATE_QUEUE_INVALID_PRIORITY := 920
+    static D3D12_MESSAGE_ID_OBJECT_DELETED_WHILE_STILL_IN_USE := 921
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_INVALID_FLAGS := 922
+    static D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_HAS_NO_RESOURCE := 923
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_RENDER_TARGET_DELETED := 924
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_ALL_RENDER_TARGETS_HAVE_UNKNOWN_FORMAT := 925
+    static D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS := 926
+    static D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_GPU_WRITTEN_READBACK_RESOURCE_MAPPED := 927
+    static D3D12_MESSAGE_ID_UNMAP_RANGE_NOT_EMPTY := 929
+    static D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE := 930
+    static D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE := 931
+    static D3D12_MESSAGE_ID_NO_GRAPHICS_API_SUPPORT := 932
+    static D3D12_MESSAGE_ID_NO_COMPUTE_API_SUPPORT := 933
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_RESOURCE_FLAGS_NOT_SUPPORTED := 934
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_ROOT_ARGUMENT_UNINITIALIZED := 935
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_DESCRIPTOR_HEAP_INDEX_OUT_OF_BOUNDS := 936
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_DESCRIPTOR_TABLE_REGISTER_INDEX_OUT_OF_BOUNDS := 937
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_DESCRIPTOR_UNINITIALIZED := 938
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_DESCRIPTOR_TYPE_MISMATCH := 939
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_SRV_RESOURCE_DIMENSION_MISMATCH := 940
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_UAV_RESOURCE_DIMENSION_MISMATCH := 941
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_INCOMPATIBLE_RESOURCE_STATE := 942
+    static D3D12_MESSAGE_ID_COPYRESOURCE_NULLDST := 943
+    static D3D12_MESSAGE_ID_COPYRESOURCE_INVALIDDSTRESOURCE := 944
+    static D3D12_MESSAGE_ID_COPYRESOURCE_NULLSRC := 945
+    static D3D12_MESSAGE_ID_COPYRESOURCE_INVALIDSRCRESOURCE := 946
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_NULLDST := 947
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_INVALIDDSTRESOURCE := 948
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_NULLSRC := 949
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_INVALIDSRCRESOURCE := 950
+    static D3D12_MESSAGE_ID_PIPELINE_STATE_TYPE_MISMATCH := 951
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DISPATCH_ROOT_SIGNATURE_NOT_SET := 952
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DISPATCH_ROOT_SIGNATURE_MISMATCH := 953
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_ZERO_BARRIERS := 954
+    static D3D12_MESSAGE_ID_BEGIN_END_EVENT_MISMATCH := 955
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_POSSIBLE_BEFORE_AFTER_MISMATCH := 956
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_BEGIN_END := 957
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_INVALID_RESOURCE := 958
+    static D3D12_MESSAGE_ID_USE_OF_ZERO_REFCOUNT_OBJECT := 959
+    static D3D12_MESSAGE_ID_OBJECT_EVICTED_WHILE_STILL_IN_USE := 960
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_ROOT_DESCRIPTOR_ACCESS_OUT_OF_BOUNDS := 961
+    static D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_INVALIDLIBRARYBLOB := 962
+    static D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH := 963
+    static D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_ADAPTERVERSIONMISMATCH := 964
+    static D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_UNSUPPORTED := 965
+    static D3D12_MESSAGE_ID_CREATE_PIPELINELIBRARY := 966
+    static D3D12_MESSAGE_ID_LIVE_PIPELINELIBRARY := 967
+    static D3D12_MESSAGE_ID_DESTROY_PIPELINELIBRARY := 968
+    static D3D12_MESSAGE_ID_STOREPIPELINE_NONAME := 969
+    static D3D12_MESSAGE_ID_STOREPIPELINE_DUPLICATENAME := 970
+    static D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND := 971
+    static D3D12_MESSAGE_ID_LOADPIPELINE_INVALIDDESC := 972
+    static D3D12_MESSAGE_ID_PIPELINELIBRARY_SERIALIZE_NOTENOUGHMEMORY := 973
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_PS_OUTPUT_RT_OUTPUT_MISMATCH := 974
+    static D3D12_MESSAGE_ID_SETEVENTONMULTIPLEFENCECOMPLETION_INVALIDFLAGS := 975
+    static D3D12_MESSAGE_ID_CREATE_QUEUE_VIDEO_NOT_SUPPORTED := 976
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_ALLOCATOR_VIDEO_NOT_SUPPORTED := 977
+    static D3D12_MESSAGE_ID_CREATEQUERY_HEAP_VIDEO_DECODE_STATISTICS_NOT_SUPPORTED := 978
+    static D3D12_MESSAGE_ID_CREATE_VIDEODECODECOMMANDLIST := 979
+    static D3D12_MESSAGE_ID_CREATE_VIDEODECODER := 980
+    static D3D12_MESSAGE_ID_CREATE_VIDEODECODESTREAM := 981
+    static D3D12_MESSAGE_ID_LIVE_VIDEODECODECOMMANDLIST := 982
+    static D3D12_MESSAGE_ID_LIVE_VIDEODECODER := 983
+    static D3D12_MESSAGE_ID_LIVE_VIDEODECODESTREAM := 984
+    static D3D12_MESSAGE_ID_DESTROY_VIDEODECODECOMMANDLIST := 985
+    static D3D12_MESSAGE_ID_DESTROY_VIDEODECODER := 986
+    static D3D12_MESSAGE_ID_DESTROY_VIDEODECODESTREAM := 987
+    static D3D12_MESSAGE_ID_DECODE_FRAME_INVALID_PARAMETERS := 988
+    static D3D12_MESSAGE_ID_DEPRECATED_API := 989
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE := 990
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DESCRIPTOR_TABLE_NOT_SET := 991
+    static D3D12_MESSAGE_ID_COMMAND_LIST_ROOT_CONSTANT_BUFFER_VIEW_NOT_SET := 992
+    static D3D12_MESSAGE_ID_COMMAND_LIST_ROOT_SHADER_RESOURCE_VIEW_NOT_SET := 993
+    static D3D12_MESSAGE_ID_COMMAND_LIST_ROOT_UNORDERED_ACCESS_VIEW_NOT_SET := 994
+    static D3D12_MESSAGE_ID_DISCARD_INVALID_SUBRESOURCE_RANGE := 995
+    static D3D12_MESSAGE_ID_DISCARD_ONE_SUBRESOURCE_FOR_MIPS_WITH_RECTS := 996
+    static D3D12_MESSAGE_ID_DISCARD_NO_RECTS_FOR_NON_TEXTURE2D := 997
+    static D3D12_MESSAGE_ID_COPY_ON_SAME_SUBRESOURCE := 998
+    static D3D12_MESSAGE_ID_SETRESIDENCYPRIORITY_INVALID_PAGEABLE := 999
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_UNSUPPORTED := 1000
+    static D3D12_MESSAGE_ID_STATIC_DESCRIPTOR_INVALID_DESCRIPTOR_CHANGE := 1001
+    static D3D12_MESSAGE_ID_DATA_STATIC_DESCRIPTOR_INVALID_DATA_CHANGE := 1002
+    static D3D12_MESSAGE_ID_DATA_STATIC_WHILE_SET_AT_EXECUTE_DESCRIPTOR_INVALID_DATA_CHANGE := 1003
+    static D3D12_MESSAGE_ID_EXECUTE_BUNDLE_STATIC_DESCRIPTOR_DATA_STATIC_NOT_SET := 1004
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_RESOURCE_ACCESS_OUT_OF_BOUNDS := 1005
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_SAMPLER_MODE_MISMATCH := 1006
+    static D3D12_MESSAGE_ID_CREATE_FENCE_INVALID_FLAGS := 1007
+    static D3D12_MESSAGE_ID_RESOURCE_BARRIER_DUPLICATE_SUBRESOURCE_TRANSITIONS := 1008
+    static D3D12_MESSAGE_ID_SETRESIDENCYPRIORITY_INVALID_PRIORITY := 1009
+    static D3D12_MESSAGE_ID_CREATE_DESCRIPTOR_HEAP_LARGE_NUM_DESCRIPTORS := 1013
+    static D3D12_MESSAGE_ID_BEGIN_EVENT := 1014
+    static D3D12_MESSAGE_ID_END_EVENT := 1015
+    static D3D12_MESSAGE_ID_CREATEDEVICE_DEBUG_LAYER_STARTUP_OPTIONS := 1016
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_DEPTHBOUNDSTEST_UNSUPPORTED := 1017
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_DUPLICATE_SUBOBJECT := 1018
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_UNKNOWN_SUBOBJECT := 1019
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_ZERO_SIZE_STREAM := 1020
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_INVALID_STREAM := 1021
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CANNOT_DEDUCE_TYPE := 1022
+    static D3D12_MESSAGE_ID_COMMAND_LIST_STATIC_DESCRIPTOR_RESOURCE_DIMENSION_MISMATCH := 1023
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_QUEUE_INSUFFICIENT_PRIVILEGE_FOR_GLOBAL_REALTIME := 1024
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_QUEUE_INSUFFICIENT_HARDWARE_SUPPORT_FOR_GLOBAL_REALTIME := 1025
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_INVALID_ARCHITECTURE := 1026
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_NULL_DST := 1027
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_INVALID_DST_RESOURCE_DIMENSION := 1028
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_DST_RANGE_OUT_OF_BOUNDS := 1029
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_NULL_SRC := 1030
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_INVALID_SRC_RESOURCE_DIMENSION := 1031
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_SRC_RANGE_OUT_OF_BOUNDS := 1032
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_INVALID_OFFSET_ALIGNMENT := 1033
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_NULL_DEPENDENT_RESOURCES := 1034
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_NULL_DEPENDENT_SUBRESOURCE_RANGES := 1035
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_INVALID_DEPENDENT_RESOURCE := 1036
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_INVALID_DEPENDENT_SUBRESOURCE_RANGE := 1037
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_DEPENDENT_SUBRESOURCE_OUT_OF_BOUNDS := 1038
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_DEPENDENT_RANGE_OUT_OF_BOUNDS := 1039
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_ZERO_DEPENDENCIES := 1040
+    static D3D12_MESSAGE_ID_DEVICE_CREATE_SHARED_HANDLE_INVALIDARG := 1041
+    static D3D12_MESSAGE_ID_DESCRIPTOR_HANDLE_WITH_INVALID_RESOURCE := 1042
+    static D3D12_MESSAGE_ID_SETDEPTHBOUNDS_INVALIDARGS := 1043
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_RESOURCE_STATE_IMPRECISE := 1044
+    static D3D12_MESSAGE_ID_COMMAND_LIST_PIPELINE_STATE_NOT_SET := 1045
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_SHADER_MODEL_MISMATCH := 1046
+    static D3D12_MESSAGE_ID_OBJECT_ACCESSED_WHILE_STILL_IN_USE := 1047
+    static D3D12_MESSAGE_ID_PROGRAMMABLE_MSAA_UNSUPPORTED := 1048
+    static D3D12_MESSAGE_ID_SETSAMPLEPOSITIONS_INVALIDARGS := 1049
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCEREGION_INVALID_RECT := 1050
+    static D3D12_MESSAGE_ID_CREATE_VIDEODECODECOMMANDQUEUE := 1051
+    static D3D12_MESSAGE_ID_CREATE_VIDEOPROCESSCOMMANDLIST := 1052
+    static D3D12_MESSAGE_ID_CREATE_VIDEOPROCESSCOMMANDQUEUE := 1053
+    static D3D12_MESSAGE_ID_LIVE_VIDEODECODECOMMANDQUEUE := 1054
+    static D3D12_MESSAGE_ID_LIVE_VIDEOPROCESSCOMMANDLIST := 1055
+    static D3D12_MESSAGE_ID_LIVE_VIDEOPROCESSCOMMANDQUEUE := 1056
+    static D3D12_MESSAGE_ID_DESTROY_VIDEODECODECOMMANDQUEUE := 1057
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOPROCESSCOMMANDLIST := 1058
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOPROCESSCOMMANDQUEUE := 1059
+    static D3D12_MESSAGE_ID_CREATE_VIDEOPROCESSOR := 1060
+    static D3D12_MESSAGE_ID_CREATE_VIDEOPROCESSSTREAM := 1061
+    static D3D12_MESSAGE_ID_LIVE_VIDEOPROCESSOR := 1062
+    static D3D12_MESSAGE_ID_LIVE_VIDEOPROCESSSTREAM := 1063
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOPROCESSOR := 1064
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOPROCESSSTREAM := 1065
+    static D3D12_MESSAGE_ID_PROCESS_FRAME_INVALID_PARAMETERS := 1066
+    static D3D12_MESSAGE_ID_COPY_INVALIDLAYOUT := 1067
+    static D3D12_MESSAGE_ID_CREATE_CRYPTO_SESSION := 1068
+    static D3D12_MESSAGE_ID_CREATE_CRYPTO_SESSION_POLICY := 1069
+    static D3D12_MESSAGE_ID_CREATE_PROTECTED_RESOURCE_SESSION := 1070
+    static D3D12_MESSAGE_ID_LIVE_CRYPTO_SESSION := 1071
+    static D3D12_MESSAGE_ID_LIVE_CRYPTO_SESSION_POLICY := 1072
+    static D3D12_MESSAGE_ID_LIVE_PROTECTED_RESOURCE_SESSION := 1073
+    static D3D12_MESSAGE_ID_DESTROY_CRYPTO_SESSION := 1074
+    static D3D12_MESSAGE_ID_DESTROY_CRYPTO_SESSION_POLICY := 1075
+    static D3D12_MESSAGE_ID_DESTROY_PROTECTED_RESOURCE_SESSION := 1076
+    static D3D12_MESSAGE_ID_PROTECTED_RESOURCE_SESSION_UNSUPPORTED := 1077
+    static D3D12_MESSAGE_ID_FENCE_INVALIDOPERATION := 1078
+    static D3D12_MESSAGE_ID_CREATEQUERY_HEAP_COPY_QUEUE_TIMESTAMPS_NOT_SUPPORTED := 1079
+    static D3D12_MESSAGE_ID_SAMPLEPOSITIONS_MISMATCH_DEFERRED := 1080
+    static D3D12_MESSAGE_ID_SAMPLEPOSITIONS_MISMATCH_RECORDTIME_ASSUMEDFROMFIRSTUSE := 1081
+    static D3D12_MESSAGE_ID_SAMPLEPOSITIONS_MISMATCH_RECORDTIME_ASSUMEDFROMCLEAR := 1082
+    static D3D12_MESSAGE_ID_CREATE_VIDEODECODERHEAP := 1083
+    static D3D12_MESSAGE_ID_LIVE_VIDEODECODERHEAP := 1084
+    static D3D12_MESSAGE_ID_DESTROY_VIDEODECODERHEAP := 1085
+    static D3D12_MESSAGE_ID_OPENEXISTINGHEAP_INVALIDARG_RETURN := 1086
+    static D3D12_MESSAGE_ID_OPENEXISTINGHEAP_OUTOFMEMORY_RETURN := 1087
+    static D3D12_MESSAGE_ID_OPENEXISTINGHEAP_INVALIDADDRESS := 1088
+    static D3D12_MESSAGE_ID_OPENEXISTINGHEAP_INVALIDHANDLE := 1089
+    static D3D12_MESSAGE_ID_WRITEBUFFERIMMEDIATE_INVALID_DEST := 1090
+    static D3D12_MESSAGE_ID_WRITEBUFFERIMMEDIATE_INVALID_MODE := 1091
+    static D3D12_MESSAGE_ID_WRITEBUFFERIMMEDIATE_INVALID_ALIGNMENT := 1092
+    static D3D12_MESSAGE_ID_WRITEBUFFERIMMEDIATE_NOT_SUPPORTED := 1093
+    static D3D12_MESSAGE_ID_SETVIEWINSTANCEMASK_INVALIDARGS := 1094
+    static D3D12_MESSAGE_ID_VIEW_INSTANCING_UNSUPPORTED := 1095
+    static D3D12_MESSAGE_ID_VIEW_INSTANCING_INVALIDARGS := 1096
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_MISMATCH_DECODE_REFERENCE_ONLY_FLAG := 1097
+    static D3D12_MESSAGE_ID_COPYRESOURCE_MISMATCH_DECODE_REFERENCE_ONLY_FLAG := 1098
+    static D3D12_MESSAGE_ID_CREATE_VIDEO_DECODE_HEAP_CAPS_FAILURE := 1099
+    static D3D12_MESSAGE_ID_CREATE_VIDEO_DECODE_HEAP_CAPS_UNSUPPORTED := 1100
+    static D3D12_MESSAGE_ID_VIDEO_DECODE_SUPPORT_INVALID_INPUT := 1101
+    static D3D12_MESSAGE_ID_CREATE_VIDEO_DECODER_UNSUPPORTED := 1102
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_METADATA_ERROR := 1103
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_VIEW_INSTANCING_VERTEX_SIZE_EXCEEDED := 1104
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_RUNTIME_INTERNAL_ERROR := 1105
+    static D3D12_MESSAGE_ID_NO_VIDEO_API_SUPPORT := 1106
+    static D3D12_MESSAGE_ID_VIDEO_PROCESS_SUPPORT_INVALID_INPUT := 1107
+    static D3D12_MESSAGE_ID_CREATE_VIDEO_PROCESSOR_CAPS_FAILURE := 1108
+    static D3D12_MESSAGE_ID_VIDEO_PROCESS_SUPPORT_UNSUPPORTED_FORMAT := 1109
+    static D3D12_MESSAGE_ID_VIDEO_DECODE_FRAME_INVALID_ARGUMENT := 1110
+    static D3D12_MESSAGE_ID_ENQUEUE_MAKE_RESIDENT_INVALID_FLAGS := 1111
+    static D3D12_MESSAGE_ID_OPENEXISTINGHEAP_UNSUPPORTED := 1112
+    static D3D12_MESSAGE_ID_VIDEO_PROCESS_FRAMES_INVALID_ARGUMENT := 1113
+    static D3D12_MESSAGE_ID_VIDEO_DECODE_SUPPORT_UNSUPPORTED := 1114
+    static D3D12_MESSAGE_ID_CREATE_COMMANDRECORDER := 1115
+    static D3D12_MESSAGE_ID_LIVE_COMMANDRECORDER := 1116
+    static D3D12_MESSAGE_ID_DESTROY_COMMANDRECORDER := 1117
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_RECORDER_VIDEO_NOT_SUPPORTED := 1118
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_RECORDER_INVALID_SUPPORT_FLAGS := 1119
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_RECORDER_INVALID_FLAGS := 1120
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_RECORDER_MORE_RECORDERS_THAN_LOGICAL_PROCESSORS := 1121
+    static D3D12_MESSAGE_ID_CREATE_COMMANDPOOL := 1122
+    static D3D12_MESSAGE_ID_LIVE_COMMANDPOOL := 1123
+    static D3D12_MESSAGE_ID_DESTROY_COMMANDPOOL := 1124
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_POOL_INVALID_FLAGS := 1125
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_LIST_VIDEO_NOT_SUPPORTED := 1126
+    static D3D12_MESSAGE_ID_COMMAND_RECORDER_SUPPORT_FLAGS_MISMATCH := 1127
+    static D3D12_MESSAGE_ID_COMMAND_RECORDER_CONTENTION := 1128
+    static D3D12_MESSAGE_ID_COMMAND_RECORDER_USAGE_WITH_CREATECOMMANDLIST_COMMAND_LIST := 1129
+    static D3D12_MESSAGE_ID_COMMAND_ALLOCATOR_USAGE_WITH_CREATECOMMANDLIST1_COMMAND_LIST := 1130
+    static D3D12_MESSAGE_ID_CANNOT_EXECUTE_EMPTY_COMMAND_LIST := 1131
+    static D3D12_MESSAGE_ID_CANNOT_RESET_COMMAND_POOL_WITH_OPEN_COMMAND_LISTS := 1132
+    static D3D12_MESSAGE_ID_CANNOT_USE_COMMAND_RECORDER_WITHOUT_CURRENT_TARGET := 1133
+    static D3D12_MESSAGE_ID_CANNOT_CHANGE_COMMAND_RECORDER_TARGET_WHILE_RECORDING := 1134
+    static D3D12_MESSAGE_ID_COMMAND_POOL_SYNC := 1135
+    static D3D12_MESSAGE_ID_EVICT_UNDERFLOW := 1136
+    static D3D12_MESSAGE_ID_CREATE_META_COMMAND := 1137
+    static D3D12_MESSAGE_ID_LIVE_META_COMMAND := 1138
+    static D3D12_MESSAGE_ID_DESTROY_META_COMMAND := 1139
+    static D3D12_MESSAGE_ID_COPYBUFFERREGION_INVALID_DST_RESOURCE := 1140
+    static D3D12_MESSAGE_ID_COPYBUFFERREGION_INVALID_SRC_RESOURCE := 1141
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_INVALID_DST_RESOURCE := 1142
+    static D3D12_MESSAGE_ID_ATOMICCOPYBUFFER_INVALID_SRC_RESOURCE := 1143
+    static D3D12_MESSAGE_ID_CREATEPLACEDRESOURCEONBUFFER_NULL_BUFFER := 1144
+    static D3D12_MESSAGE_ID_CREATEPLACEDRESOURCEONBUFFER_NULL_RESOURCE_DESC := 1145
+    static D3D12_MESSAGE_ID_CREATEPLACEDRESOURCEONBUFFER_UNSUPPORTED := 1146
+    static D3D12_MESSAGE_ID_CREATEPLACEDRESOURCEONBUFFER_INVALID_BUFFER_DIMENSION := 1147
+    static D3D12_MESSAGE_ID_CREATEPLACEDRESOURCEONBUFFER_INVALID_BUFFER_FLAGS := 1148
+    static D3D12_MESSAGE_ID_CREATEPLACEDRESOURCEONBUFFER_INVALID_BUFFER_OFFSET := 1149
+    static D3D12_MESSAGE_ID_CREATEPLACEDRESOURCEONBUFFER_INVALID_RESOURCE_DIMENSION := 1150
+    static D3D12_MESSAGE_ID_CREATEPLACEDRESOURCEONBUFFER_INVALID_RESOURCE_FLAGS := 1151
+    static D3D12_MESSAGE_ID_CREATEPLACEDRESOURCEONBUFFER_OUTOFMEMORY_RETURN := 1152
+    static D3D12_MESSAGE_ID_CANNOT_CREATE_GRAPHICS_AND_VIDEO_COMMAND_RECORDER := 1153
+    static D3D12_MESSAGE_ID_UPDATETILEMAPPINGS_POSSIBLY_MISMATCHING_PROPERTIES := 1154
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_LIST_INVALID_COMMAND_LIST_TYPE := 1155
+    static D3D12_MESSAGE_ID_CLEARUNORDEREDACCESSVIEW_INCOMPATIBLE_WITH_STRUCTURED_BUFFERS := 1156
+    static D3D12_MESSAGE_ID_COMPUTE_ONLY_DEVICE_OPERATION_UNSUPPORTED := 1157
+    static D3D12_MESSAGE_ID_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INVALID := 1158
+    static D3D12_MESSAGE_ID_EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_INVALID := 1159
+    static D3D12_MESSAGE_ID_COPY_RAYTRACING_ACCELERATION_STRUCTURE_INVALID := 1160
+    static D3D12_MESSAGE_ID_DISPATCH_RAYS_INVALID := 1161
+    static D3D12_MESSAGE_ID_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_INVALID := 1162
+    static D3D12_MESSAGE_ID_CREATE_LIFETIMETRACKER := 1163
+    static D3D12_MESSAGE_ID_LIVE_LIFETIMETRACKER := 1164
+    static D3D12_MESSAGE_ID_DESTROY_LIFETIMETRACKER := 1165
+    static D3D12_MESSAGE_ID_DESTROYOWNEDOBJECT_OBJECTNOTOWNED := 1166
+    static D3D12_MESSAGE_ID_CREATE_TRACKEDWORKLOAD := 1167
+    static D3D12_MESSAGE_ID_LIVE_TRACKEDWORKLOAD := 1168
+    static D3D12_MESSAGE_ID_DESTROY_TRACKEDWORKLOAD := 1169
+    static D3D12_MESSAGE_ID_RENDER_PASS_ERROR := 1170
+    static D3D12_MESSAGE_ID_META_COMMAND_ID_INVALID := 1171
+    static D3D12_MESSAGE_ID_META_COMMAND_UNSUPPORTED_PARAMS := 1172
+    static D3D12_MESSAGE_ID_META_COMMAND_FAILED_ENUMERATION := 1173
+    static D3D12_MESSAGE_ID_META_COMMAND_PARAMETER_SIZE_MISMATCH := 1174
+    static D3D12_MESSAGE_ID_UNINITIALIZED_META_COMMAND := 1175
+    static D3D12_MESSAGE_ID_META_COMMAND_INVALID_GPU_VIRTUAL_ADDRESS := 1176
+    static D3D12_MESSAGE_ID_CREATE_VIDEOENCODECOMMANDLIST := 1177
+    static D3D12_MESSAGE_ID_LIVE_VIDEOENCODECOMMANDLIST := 1178
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOENCODECOMMANDLIST := 1179
+    static D3D12_MESSAGE_ID_CREATE_VIDEOENCODECOMMANDQUEUE := 1180
+    static D3D12_MESSAGE_ID_LIVE_VIDEOENCODECOMMANDQUEUE := 1181
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOENCODECOMMANDQUEUE := 1182
+    static D3D12_MESSAGE_ID_CREATE_VIDEOMOTIONESTIMATOR := 1183
+    static D3D12_MESSAGE_ID_LIVE_VIDEOMOTIONESTIMATOR := 1184
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOMOTIONESTIMATOR := 1185
+    static D3D12_MESSAGE_ID_CREATE_VIDEOMOTIONVECTORHEAP := 1186
+    static D3D12_MESSAGE_ID_LIVE_VIDEOMOTIONVECTORHEAP := 1187
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOMOTIONVECTORHEAP := 1188
+    static D3D12_MESSAGE_ID_MULTIPLE_TRACKED_WORKLOADS := 1189
+    static D3D12_MESSAGE_ID_MULTIPLE_TRACKED_WORKLOAD_PAIRS := 1190
+    static D3D12_MESSAGE_ID_OUT_OF_ORDER_TRACKED_WORKLOAD_PAIR := 1191
+    static D3D12_MESSAGE_ID_CANNOT_ADD_TRACKED_WORKLOAD := 1192
+    static D3D12_MESSAGE_ID_INCOMPLETE_TRACKED_WORKLOAD_PAIR := 1193
+    static D3D12_MESSAGE_ID_CREATE_STATE_OBJECT_ERROR := 1194
+    static D3D12_MESSAGE_ID_GET_SHADER_IDENTIFIER_ERROR := 1195
+    static D3D12_MESSAGE_ID_GET_SHADER_STACK_SIZE_ERROR := 1196
+    static D3D12_MESSAGE_ID_GET_PIPELINE_STACK_SIZE_ERROR := 1197
+    static D3D12_MESSAGE_ID_SET_PIPELINE_STACK_SIZE_ERROR := 1198
+    static D3D12_MESSAGE_ID_GET_SHADER_IDENTIFIER_SIZE_INVALID := 1199
+    static D3D12_MESSAGE_ID_CHECK_DRIVER_MATCHING_IDENTIFIER_INVALID := 1200
+    static D3D12_MESSAGE_ID_CHECK_DRIVER_MATCHING_IDENTIFIER_DRIVER_REPORTED_ISSUE := 1201
+    static D3D12_MESSAGE_ID_RENDER_PASS_INVALID_RESOURCE_BARRIER := 1202
+    static D3D12_MESSAGE_ID_RENDER_PASS_DISALLOWED_API_CALLED := 1203
+    static D3D12_MESSAGE_ID_RENDER_PASS_CANNOT_NEST_RENDER_PASSES := 1204
+    static D3D12_MESSAGE_ID_RENDER_PASS_CANNOT_END_WITHOUT_BEGIN := 1205
+    static D3D12_MESSAGE_ID_RENDER_PASS_CANNOT_CLOSE_COMMAND_LIST := 1206
+    static D3D12_MESSAGE_ID_RENDER_PASS_GPU_WORK_WHILE_SUSPENDED := 1207
+    static D3D12_MESSAGE_ID_RENDER_PASS_MISMATCHING_SUSPEND_RESUME := 1208
+    static D3D12_MESSAGE_ID_RENDER_PASS_NO_PRIOR_SUSPEND_WITHIN_EXECUTECOMMANDLISTS := 1209
+    static D3D12_MESSAGE_ID_RENDER_PASS_NO_SUBSEQUENT_RESUME_WITHIN_EXECUTECOMMANDLISTS := 1210
+    static D3D12_MESSAGE_ID_TRACKED_WORKLOAD_COMMAND_QUEUE_MISMATCH := 1211
+    static D3D12_MESSAGE_ID_TRACKED_WORKLOAD_NOT_SUPPORTED := 1212
+    static D3D12_MESSAGE_ID_RENDER_PASS_MISMATCHING_NO_ACCESS := 1213
+    static D3D12_MESSAGE_ID_RENDER_PASS_UNSUPPORTED_RESOLVE := 1214
+    static D3D12_MESSAGE_ID_CLEARUNORDEREDACCESSVIEW_INVALID_RESOURCE_PTR := 1215
+    static D3D12_MESSAGE_ID_WINDOWS7_FENCE_OUTOFORDER_SIGNAL := 1216
+    static D3D12_MESSAGE_ID_WINDOWS7_FENCE_OUTOFORDER_WAIT := 1217
+    static D3D12_MESSAGE_ID_VIDEO_CREATE_MOTION_ESTIMATOR_INVALID_ARGUMENT := 1218
+    static D3D12_MESSAGE_ID_VIDEO_CREATE_MOTION_VECTOR_HEAP_INVALID_ARGUMENT := 1219
+    static D3D12_MESSAGE_ID_ESTIMATE_MOTION_INVALID_ARGUMENT := 1220
+    static D3D12_MESSAGE_ID_RESOLVE_MOTION_VECTOR_HEAP_INVALID_ARGUMENT := 1221
+    static D3D12_MESSAGE_ID_GETGPUVIRTUALADDRESS_INVALID_HEAP_TYPE := 1222
+    static D3D12_MESSAGE_ID_SET_BACKGROUND_PROCESSING_MODE_INVALID_ARGUMENT := 1223
+    static D3D12_MESSAGE_ID_CREATE_COMMAND_LIST_INVALID_COMMAND_LIST_TYPE_FOR_FEATURE_LEVEL := 1224
+    static D3D12_MESSAGE_ID_CREATE_VIDEOEXTENSIONCOMMAND := 1225
+    static D3D12_MESSAGE_ID_LIVE_VIDEOEXTENSIONCOMMAND := 1226
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOEXTENSIONCOMMAND := 1227
+    static D3D12_MESSAGE_ID_INVALID_VIDEO_EXTENSION_COMMAND_ID := 1228
+    static D3D12_MESSAGE_ID_VIDEO_EXTENSION_COMMAND_INVALID_ARGUMENT := 1229
+    static D3D12_MESSAGE_ID_CREATE_ROOT_SIGNATURE_NOT_UNIQUE_IN_DXIL_LIBRARY := 1230
+    static D3D12_MESSAGE_ID_VARIABLE_SHADING_RATE_NOT_ALLOWED_WITH_TIR := 1231
+    static D3D12_MESSAGE_ID_GEOMETRY_SHADER_OUTPUTTING_BOTH_VIEWPORT_ARRAY_INDEX_AND_SHADING_RATE_NOT_SUPPORTED_ON_DEVICE := 1232
+    static D3D12_MESSAGE_ID_RSSETSHADING_RATE_INVALID_SHADING_RATE := 1233
+    static D3D12_MESSAGE_ID_RSSETSHADING_RATE_SHADING_RATE_NOT_PERMITTED_BY_CAP := 1234
+    static D3D12_MESSAGE_ID_RSSETSHADING_RATE_INVALID_COMBINER := 1235
+    static D3D12_MESSAGE_ID_RSSETSHADINGRATEIMAGE_REQUIRES_TIER_2 := 1236
+    static D3D12_MESSAGE_ID_RSSETSHADINGRATE_REQUIRES_TIER_1 := 1237
+    static D3D12_MESSAGE_ID_SHADING_RATE_IMAGE_INCORRECT_FORMAT := 1238
+    static D3D12_MESSAGE_ID_SHADING_RATE_IMAGE_INCORRECT_ARRAY_SIZE := 1239
+    static D3D12_MESSAGE_ID_SHADING_RATE_IMAGE_INCORRECT_MIP_LEVEL := 1240
+    static D3D12_MESSAGE_ID_SHADING_RATE_IMAGE_INCORRECT_SAMPLE_COUNT := 1241
+    static D3D12_MESSAGE_ID_SHADING_RATE_IMAGE_INCORRECT_SAMPLE_QUALITY := 1242
+    static D3D12_MESSAGE_ID_NON_RETAIL_SHADER_MODEL_WONT_VALIDATE := 1243
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_AS_ROOT_SIGNATURE_MISMATCH := 1244
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_MS_ROOT_SIGNATURE_MISMATCH := 1245
+    static D3D12_MESSAGE_ID_ADD_TO_STATE_OBJECT_ERROR := 1246
+    static D3D12_MESSAGE_ID_CREATE_PROTECTED_RESOURCE_SESSION_INVALID_ARGUMENT := 1247
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_MS_PSO_DESC_MISMATCH := 1248
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_MS_INCOMPLETE_TYPE := 1249
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_AS_NOT_MS_MISMATCH := 1250
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_MS_NOT_PS_MISMATCH := 1251
+    static D3D12_MESSAGE_ID_NONZERO_SAMPLER_FEEDBACK_MIP_REGION_WITH_INCOMPATIBLE_FORMAT := 1252
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_INPUTLAYOUT_SHADER_MISMATCH := 1253
+    static D3D12_MESSAGE_ID_EMPTY_DISPATCH := 1254
+    static D3D12_MESSAGE_ID_RESOURCE_FORMAT_REQUIRES_SAMPLER_FEEDBACK_CAPABILITY := 1255
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_MAP_INVALID_MIP_REGION := 1256
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_MAP_INVALID_DIMENSION := 1257
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_MAP_INVALID_SAMPLE_COUNT := 1258
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_MAP_INVALID_SAMPLE_QUALITY := 1259
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_MAP_INVALID_LAYOUT := 1260
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_MAP_REQUIRES_UNORDERED_ACCESS_FLAG := 1261
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_CREATE_UAV_NULL_ARGUMENTS := 1262
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_UAV_REQUIRES_SAMPLER_FEEDBACK_CAPABILITY := 1263
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_CREATE_UAV_REQUIRES_FEEDBACK_MAP_FORMAT := 1264
+    static D3D12_MESSAGE_ID_CREATEMESHSHADER_INVALIDSHADERBYTECODE := 1265
+    static D3D12_MESSAGE_ID_CREATEMESHSHADER_OUTOFMEMORY := 1266
+    static D3D12_MESSAGE_ID_CREATEMESHSHADERWITHSTREAMOUTPUT_INVALIDSHADERTYPE := 1267
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_SAMPLER_FEEDBACK_TRANSCODE_INVALID_FORMAT := 1268
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_SAMPLER_FEEDBACK_INVALID_MIP_LEVEL_COUNT := 1269
+    static D3D12_MESSAGE_ID_RESOLVESUBRESOURCE_SAMPLER_FEEDBACK_TRANSCODE_ARRAY_SIZE_MISMATCH := 1270
+    static D3D12_MESSAGE_ID_SAMPLER_FEEDBACK_CREATE_UAV_MISMATCHING_TARGETED_RESOURCE := 1271
+    static D3D12_MESSAGE_ID_CREATEMESHSHADER_OUTPUTEXCEEDSMAXSIZE := 1272
+    static D3D12_MESSAGE_ID_CREATEMESHSHADER_GROUPSHAREDEXCEEDSMAXSIZE := 1273
+    static D3D12_MESSAGE_ID_VERTEX_SHADER_OUTPUTTING_BOTH_VIEWPORT_ARRAY_INDEX_AND_SHADING_RATE_NOT_SUPPORTED_ON_DEVICE := 1274
+    static D3D12_MESSAGE_ID_MESH_SHADER_OUTPUTTING_BOTH_VIEWPORT_ARRAY_INDEX_AND_SHADING_RATE_NOT_SUPPORTED_ON_DEVICE := 1275
+    static D3D12_MESSAGE_ID_CREATEMESHSHADER_MISMATCHEDASMSPAYLOADSIZE := 1276
+    static D3D12_MESSAGE_ID_CREATE_ROOT_SIGNATURE_UNBOUNDED_STATIC_DESCRIPTORS := 1277
+    static D3D12_MESSAGE_ID_CREATEAMPLIFICATIONSHADER_INVALIDSHADERBYTECODE := 1278
+    static D3D12_MESSAGE_ID_CREATEAMPLIFICATIONSHADER_OUTOFMEMORY := 1279
+    static D3D12_MESSAGE_ID_CREATE_SHADERCACHESESSION := 1280
+    static D3D12_MESSAGE_ID_LIVE_SHADERCACHESESSION := 1281
+    static D3D12_MESSAGE_ID_DESTROY_SHADERCACHESESSION := 1282
+    static D3D12_MESSAGE_ID_CREATESHADERCACHESESSION_INVALIDARGS := 1283
+    static D3D12_MESSAGE_ID_CREATESHADERCACHESESSION_DISABLED := 1284
+    static D3D12_MESSAGE_ID_CREATESHADERCACHESESSION_ALREADYOPEN := 1285
+    static D3D12_MESSAGE_ID_SHADERCACHECONTROL_DEVELOPERMODE := 1286
+    static D3D12_MESSAGE_ID_SHADERCACHECONTROL_INVALIDFLAGS := 1287
+    static D3D12_MESSAGE_ID_SHADERCACHECONTROL_STATEALREADYSET := 1288
+    static D3D12_MESSAGE_ID_SHADERCACHECONTROL_IGNOREDFLAG := 1289
+    static D3D12_MESSAGE_ID_SHADERCACHESESSION_STOREVALUE_ALREADYPRESENT := 1290
+    static D3D12_MESSAGE_ID_SHADERCACHESESSION_STOREVALUE_HASHCOLLISION := 1291
+    static D3D12_MESSAGE_ID_SHADERCACHESESSION_STOREVALUE_CACHEFULL := 1292
+    static D3D12_MESSAGE_ID_SHADERCACHESESSION_FINDVALUE_NOTFOUND := 1293
+    static D3D12_MESSAGE_ID_SHADERCACHESESSION_CORRUPT := 1294
+    static D3D12_MESSAGE_ID_SHADERCACHESESSION_DISABLED := 1295
+    static D3D12_MESSAGE_ID_OVERSIZED_DISPATCH := 1296
+    static D3D12_MESSAGE_ID_CREATE_VIDEOENCODER := 1297
+    static D3D12_MESSAGE_ID_LIVE_VIDEOENCODER := 1298
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOENCODER := 1299
+    static D3D12_MESSAGE_ID_CREATE_VIDEOENCODERHEAP := 1300
+    static D3D12_MESSAGE_ID_LIVE_VIDEOENCODERHEAP := 1301
+    static D3D12_MESSAGE_ID_DESTROY_VIDEOENCODERHEAP := 1302
+    static D3D12_MESSAGE_ID_COPYTEXTUREREGION_MISMATCH_ENCODE_REFERENCE_ONLY_FLAG := 1303
+    static D3D12_MESSAGE_ID_COPYRESOURCE_MISMATCH_ENCODE_REFERENCE_ONLY_FLAG := 1304
+    static D3D12_MESSAGE_ID_ENCODE_FRAME_INVALID_PARAMETERS := 1305
+    static D3D12_MESSAGE_ID_ENCODE_FRAME_UNSUPPORTED_PARAMETERS := 1306
+    static D3D12_MESSAGE_ID_RESOLVE_ENCODER_OUTPUT_METADATA_INVALID_PARAMETERS := 1307
+    static D3D12_MESSAGE_ID_RESOLVE_ENCODER_OUTPUT_METADATA_UNSUPPORTED_PARAMETERS := 1308
+    static D3D12_MESSAGE_ID_CREATE_VIDEO_ENCODER_INVALID_PARAMETERS := 1309
+    static D3D12_MESSAGE_ID_CREATE_VIDEO_ENCODER_UNSUPPORTED_PARAMETERS := 1310
+    static D3D12_MESSAGE_ID_CREATE_VIDEO_ENCODER_HEAP_INVALID_PARAMETERS := 1311
+    static D3D12_MESSAGE_ID_CREATE_VIDEO_ENCODER_HEAP_UNSUPPORTED_PARAMETERS := 1312
+    static D3D12_MESSAGE_ID_CREATECOMMANDLIST_NULL_COMMANDALLOCATOR := 1313
+    static D3D12_MESSAGE_ID_CLEAR_UNORDERED_ACCESS_VIEW_INVALID_DESCRIPTOR_HANDLE := 1314
+    static D3D12_MESSAGE_ID_DESCRIPTOR_HEAP_NOT_SHADER_VISIBLE := 1315
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_BLENDOP_WARNING := 1316
+    static D3D12_MESSAGE_ID_CREATEBLENDSTATE_BLENDOPALPHA_WARNING := 1317
+    static D3D12_MESSAGE_ID_WRITE_COMBINE_PERFORMANCE_WARNING := 1318
+    static D3D12_MESSAGE_ID_RESOLVE_QUERY_INVALID_QUERY_STATE := 1319
+    static D3D12_MESSAGE_ID_SETPRIVATEDATA_NO_ACCESS := 1320
+    static D3D12_MESSAGE_ID_COMMAND_LIST_STATIC_DESCRIPTOR_SAMPLER_MODE_MISMATCH := 1321
+    static D3D12_MESSAGE_ID_GETCOPYABLEFOOTPRINTS_UNSUPPORTED_BUFFER_WIDTH := 1322
+    static D3D12_MESSAGE_ID_CREATEMESHSHADER_TOPOLOGY_MISMATCH := 1323
+    static D3D12_MESSAGE_ID_VRS_SUM_COMBINER_REQUIRES_CAPABILITY := 1324
+    static D3D12_MESSAGE_ID_SETTING_SHADING_RATE_FROM_MS_REQUIRES_CAPABILITY := 1325
+    static D3D12_MESSAGE_ID_SHADERCACHESESSION_SHADERCACHEDELETE_NOTSUPPORTED := 1326
+    static D3D12_MESSAGE_ID_SHADERCACHECONTROL_SHADERCACHECLEAR_NOTSUPPORTED := 1327
+    static D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED := 1328
+    static D3D12_MESSAGE_ID_UNUSED_CROSS_EXECUTE_SPLIT_BARRIER := 1329
+    static D3D12_MESSAGE_ID_DEVICE_OPEN_SHARED_HANDLE_ACCESS_DENIED := 1330
+    static D3D12_MESSAGE_ID_INCOMPATIBLE_BARRIER_VALUES := 1331
+    static D3D12_MESSAGE_ID_INCOMPATIBLE_BARRIER_ACCESS := 1332
+    static D3D12_MESSAGE_ID_INCOMPATIBLE_BARRIER_SYNC := 1333
+    static D3D12_MESSAGE_ID_INCOMPATIBLE_BARRIER_LAYOUT := 1334
+    static D3D12_MESSAGE_ID_INCOMPATIBLE_BARRIER_TYPE := 1335
+    static D3D12_MESSAGE_ID_OUT_OF_BOUNDS_BARRIER_SUBRESOURCE_RANGE := 1336
+    static D3D12_MESSAGE_ID_INCOMPATIBLE_BARRIER_RESOURCE_DIMENSION := 1337
+    static D3D12_MESSAGE_ID_SET_SCISSOR_RECTS_INVALID_RECT := 1338
+    static D3D12_MESSAGE_ID_SHADING_RATE_SOURCE_REQUIRES_DIMENSION_TEXTURE2D := 1339
+    static D3D12_MESSAGE_ID_BUFFER_BARRIER_SUBREGION_OUT_OF_BOUNDS := 1340
+    static D3D12_MESSAGE_ID_UNSUPPORTED_BARRIER_LAYOUT := 1341
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_INVALID_PARAMETERS := 1342
+    static D3D12_MESSAGE_ID_ENHANCED_BARRIERS_NOT_SUPPORTED := 1343
+    static D3D12_MESSAGE_ID_LEGACY_BARRIER_VALIDATION_FORCED_ON := 1346
+    static D3D12_MESSAGE_ID_EMPTY_ROOT_DESCRIPTOR_TABLE := 1347
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_ELEMENT_OFFSET_UNALIGNED := 1348
+    static D3D12_MESSAGE_ID_ALPHA_BLEND_FACTOR_NOT_SUPPORTED := 1349
+    static D3D12_MESSAGE_ID_BARRIER_INTEROP_INVALID_LAYOUT := 1350
+    static D3D12_MESSAGE_ID_BARRIER_INTEROP_INVALID_STATE := 1351
+    static D3D12_MESSAGE_ID_GRAPHICS_PIPELINE_STATE_DESC_ZERO_SAMPLE_MASK := 1352
+    static D3D12_MESSAGE_ID_INDEPENDENT_STENCIL_REF_NOT_SUPPORTED := 1353
+    static D3D12_MESSAGE_ID_CREATEDEPTHSTENCILSTATE_INDEPENDENT_MASKS_UNSUPPORTED := 1354
+    static D3D12_MESSAGE_ID_TEXTURE_BARRIER_SUBRESOURCES_OUT_OF_BOUNDS := 1355
+    static D3D12_MESSAGE_ID_NON_OPTIMAL_BARRIER_ONLY_EXECUTE_COMMAND_LISTS := 1356
+    static D3D12_MESSAGE_ID_EXECUTE_INDIRECT_ZERO_COMMAND_COUNT := 1357
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_INCOMPATIBLE_TEXTURE_LAYOUT := 1358
+    static D3D12_MESSAGE_ID_DYNAMIC_INDEX_BUFFER_STRIP_CUT_NOT_SUPPORTED := 1359
+    static D3D12_MESSAGE_ID_PRIMITIVE_TOPOLOGY_TRIANGLE_FANS_NOT_SUPPORTED := 1360
+    static D3D12_MESSAGE_ID_CREATE_SAMPLER_COMPARISON_FUNC_IGNORED := 1361
+    static D3D12_MESSAGE_ID_CREATEHEAP_INVALIDHEAPTYPE := 1362
+    static D3D12_MESSAGE_ID_CREATERESOURCEANDHEAP_INVALIDHEAPTYPE := 1363
+    static D3D12_MESSAGE_ID_DYNAMIC_DEPTH_BIAS_NOT_SUPPORTED := 1364
+    static D3D12_MESSAGE_ID_CREATERASTERIZERSTATE_NON_WHOLE_DYNAMIC_DEPTH_BIAS := 1365
+    static D3D12_MESSAGE_ID_DYNAMIC_DEPTH_BIAS_FLAG_MISSING := 1366
+    static D3D12_MESSAGE_ID_DYNAMIC_DEPTH_BIAS_NO_PIPELINE := 1367
+    static D3D12_MESSAGE_ID_DYNAMIC_INDEX_BUFFER_STRIP_CUT_FLAG_MISSING := 1368
+    static D3D12_MESSAGE_ID_DYNAMIC_INDEX_BUFFER_STRIP_CUT_NO_PIPELINE := 1369
+    static D3D12_MESSAGE_ID_NONNORMALIZED_COORDINATE_SAMPLING_NOT_SUPPORTED := 1370
+    static D3D12_MESSAGE_ID_INVALID_CAST_TARGET := 1371
+    static D3D12_MESSAGE_ID_RENDER_PASS_COMMANDLIST_INVALID_END_STATE := 1372
+    static D3D12_MESSAGE_ID_RENDER_PASS_COMMANDLIST_INVALID_START_STATE := 1373
+    static D3D12_MESSAGE_ID_RENDER_PASS_MISMATCHING_ACCESS := 1374
+    static D3D12_MESSAGE_ID_RENDER_PASS_MISMATCHING_LOCAL_PRESERVE_PARAMETERS := 1375
+    static D3D12_MESSAGE_ID_RENDER_PASS_LOCAL_PRESERVE_RENDER_PARAMETERS_ERROR := 1376
+    static D3D12_MESSAGE_ID_RENDER_PASS_LOCAL_DEPTH_STENCIL_ERROR := 1377
+    static D3D12_MESSAGE_ID_DRAW_POTENTIALLY_OUTSIDE_OF_VALID_RENDER_AREA := 1378
+    static D3D12_MESSAGE_ID_CREATERASTERIZERSTATE_INVALID_LINERASTERIZATIONMODE := 1379
+    static D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT_SMALLRESOURCE := 1380
+    static D3D12_MESSAGE_ID_GENERIC_DEVICE_OPERATION_UNSUPPORTED := 1381
+    static D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_RENDER_TARGET_WRONG_WRITE_MASK := 1382
+    static D3D12_MESSAGE_ID_PROBABLE_PIX_EVENT_LEAK := 1383
+    static D3D12_MESSAGE_ID_PIX_EVENT_UNDERFLOW := 1384
+    static D3D12_MESSAGE_ID_RECREATEAT_INVALID_TARGET := 1385
+    static D3D12_MESSAGE_ID_RECREATEAT_INSUFFICIENT_SUPPORT := 1386
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_STRUCTURED_BUFFER_STRIDE_MISMATCH := 1387
+    static D3D12_MESSAGE_ID_DISPATCH_GRAPH_INVALID := 1388
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_TARGET_FORMAT_INVALID := 1389
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_TARGET_DIMENSION_INVALID := 1390
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_SOURCE_COLOR_FORMAT_INVALID := 1391
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_SOURCE_DEPTH_FORMAT_INVALID := 1392
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_EXPOSURE_SCALE_FORMAT_INVALID := 1393
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_ENGINE_CREATE_FLAGS_INVALID := 1394
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_EXTENSION_INTERNAL_LOAD_FAILURE := 1395
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_EXTENSION_INTERNAL_ENGINE_CREATION_ERROR := 1396
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_EXTENSION_INTERNAL_UPSCALER_CREATION_ERROR := 1397
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_EXTENSION_INTERNAL_UPSCALER_EXECUTION_ERROR := 1398
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_REGION_INVALID := 1399
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_TIME_DELTA_INVALID := 1400
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_REQUIRED_TEXTURE_IS_NULL := 1401
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_MOTION_VECTORS_FORMAT_INVALID := 1402
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_FLAGS_INVALID := 1403
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_FORMAT_INVALID := 1404
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_EXPOSURE_SCALE_TEXTURE_SIZE_INVALID := 1405
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_VARIANT_INDEX_OUT_OF_BOUNDS := 1406
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_VARIANT_ID_NOT_FOUND := 1407
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_DUPLICATE_VARIANT_ID := 1408
+    static D3D12_MESSAGE_ID_DIRECTSR_OUT_OF_MEMORY := 1409
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_UNEXPECTED_TEXTURE_IS_IGNORED := 1410
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EVICT_UNDERFLOW := 1411
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_OPTIONAL_TEXTURE_IS_NULL := 1412
+    static D3D12_MESSAGE_ID_DIRECTSR_SUPERRES_UPSCALER_EXECUTE_INVALID_CAMERA_JITTER := 1413
+    static D3D12_MESSAGE_ID_CREATE_STATE_OBJECT_WARNING := 1414
+    static D3D12_MESSAGE_ID_GUID_TEXTURE_LAYOUT_UNSUPPORTED := 1415
+    static D3D12_MESSAGE_ID_RESOLVE_ENCODER_INPUT_PARAM_LAYOUT_INVALID_PARAMETERS := 1416
+    static D3D12_MESSAGE_ID_INVALID_BARRIER_ACCESS := 1417
+    static D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_INSTANCE_COUNT_ZERO := 1418
+    static D3D12_MESSAGE_ID_DESCRIPTOR_HEAP_NOT_SET_BEFORE_ROOT_SIGNATURE_WITH_DIRECTLY_INDEXED_FLAG := 1419
+    static D3D12_MESSAGE_ID_DIFFERENT_DESCRIPTOR_HEAP_SET_AFTER_ROOT_SIGNATURE_WITH_DIRECTLY_INDEXED_FLAG := 1420
+    static D3D12_MESSAGE_ID_APPLICATION_SPECIFIC_DRIVER_STATE_NOT_SUPPORTED := 1421
+    static D3D12_MESSAGE_ID_RENDER_TARGET_OR_DEPTH_STENCIL_RESOUCE_NOT_INITIALIZED := 1422
+    static D3D12_MESSAGE_ID_BYTECODE_VALIDATION_ERROR := 1423
+    static D3D12_MESSAGE_ID_FENCE_ZERO_WAIT := 1424
+    static D3D12_MESSAGE_ID_NON_COMMON_RESOURCE_IN_COPY_QUEUE := 1431
+    static D3D12_MESSAGE_ID_CREATEPIPELINESTATE_MULTIPLE_ROOT_SIGNATURES_DEFINED := 1435
+    static D3D12_MESSAGE_ID_TEXTURE_BARRIER_INVALID_FLAGS := 1436
+    static D3D12_MESSAGE_ID_STOREPIPELINE_CACHED_BLOB_DISABLED := 1442
+    static D3D12_MESSAGE_ID_CREATEQUERYHEAP_INVALID_FLAGS := 1443
+    static D3D12_MESSAGE_ID_RESOLVEQUERYDATA_INVALID_QUERYHEAP := 1444
+    static D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_NON_UNIFORM_RESOURCE_INDEX := 1451
+    static D3D12_MESSAGE_ID_DEGENERATE_SPLIT_BARRIER := 1466
+    static D3D12_MESSAGE_ID_D3D12_MESSAGES_END := 1467
+}
+struct D3D12_MESSAGE {
+    Category : D3D12_MESSAGE_CATEGORY
+    Severity : D3D12_MESSAGE_SEVERITY
+    ID : D3D12_MESSAGE_ID
+    pDescription : UInt8.Ptr
+    DescriptionByteLength : IntPtr
+}
+struct D3D12_INFO_QUEUE_FILTER_DESC {
+    NumCategories : UInt32
+    pCategoryList : D3D12_MESSAGE_CATEGORY.Ptr
+    NumSeverities : UInt32
+    pSeverityList : D3D12_MESSAGE_SEVERITY.Ptr
+    NumIDs : UInt32
+    pIDList : D3D12_MESSAGE_ID.Ptr
+}
+struct D3D12_INFO_QUEUE_FILTER {
+    AllowList : D3D12_INFO_QUEUE_FILTER_DESC
+    DenyList : D3D12_INFO_QUEUE_FILTER_DESC
+}
+struct ID3D12InfoQueue extends IUnknown {
+    static IID := "{0742A90B-C387-483F-B946-30A7E4E61458}"
+    SetMessageCountLimit(MessageCountLimit)
+      => ComCall(3, this.p, Int64, MessageCountLimit)
+    ClearStoredMessages()
+      => ComCall(4, this.p, "void")
+    GetMessage(MessageIndex, pMessage?, pMessageByteLength)
+      => ComCall(5, this.p, Int64, MessageIndex, D3D12_MESSAGE.Ptr, pMessage?, IntPtr.Ptr, pMessageByteLength)
+    GetNumMessagesAllowedByStorageFilter()
+      => ComCall(6, this.p, Int64)
+    GetNumMessagesDeniedByStorageFilter()
+      => ComCall(7, this.p, Int64)
+    GetNumStoredMessages()
+      => ComCall(8, this.p, Int64)
+    GetNumStoredMessagesAllowedByRetrievalFilter()
+      => ComCall(9, this.p, Int64)
+    GetNumMessagesDiscardedByMessageCountLimit()
+      => ComCall(10, this.p, Int64)
+    GetMessageCountLimit()
+      => ComCall(11, this.p, Int64)
+    AddStorageFilterEntries(pFilter)
+      => ComCall(12, this.p, D3D12_INFO_QUEUE_FILTER.Ptr, pFilter)
+    GetStorageFilter(pFilter?, pFilterByteLength)
+      => ComCall(13, this.p, D3D12_INFO_QUEUE_FILTER.Ptr, pFilter?, IntPtr.Ptr, pFilterByteLength)
+    ClearStorageFilter()
+      => ComCall(14, this.p, "void")
+    PushEmptyStorageFilter()
+      => ComCall(15, this.p)
+    PushCopyOfStorageFilter()
+      => ComCall(16, this.p)
+    PushStorageFilter(pFilter)
+      => ComCall(17, this.p, D3D12_INFO_QUEUE_FILTER.Ptr, pFilter)
+    PopStorageFilter()
+      => ComCall(18, this.p, "void")
+    GetStorageFilterStackSize()
+      => ComCall(19, this.p, UInt32)
+    AddRetrievalFilterEntries(pFilter)
+      => ComCall(20, this.p, D3D12_INFO_QUEUE_FILTER.Ptr, pFilter)
+    GetRetrievalFilter(pFilter?, pFilterByteLength)
+      => ComCall(21, this.p, D3D12_INFO_QUEUE_FILTER.Ptr, pFilter?, IntPtr.Ptr, pFilterByteLength)
+    ClearRetrievalFilter()
+      => ComCall(22, this.p, "void")
+    PushEmptyRetrievalFilter()
+      => ComCall(23, this.p)
+    PushCopyOfRetrievalFilter()
+      => ComCall(24, this.p)
+    PushRetrievalFilter(pFilter)
+      => ComCall(25, this.p, D3D12_INFO_QUEUE_FILTER.Ptr, pFilter)
+    PopRetrievalFilter()
+      => ComCall(26, this.p, "void")
+    GetRetrievalFilterStackSize()
+      => ComCall(27, this.p, UInt32)
+    AddMessage(Category, Severity, ID, pDescription)
+      => ComCall(28, this.p, D3D12_MESSAGE_CATEGORY, Category, D3D12_MESSAGE_SEVERITY, Severity, D3D12_MESSAGE_ID, ID, PSTR, pDescription)
+    AddApplicationMessage(Severity, pDescription)
+      => ComCall(29, this.p, D3D12_MESSAGE_SEVERITY, Severity, PSTR, pDescription)
+    SetBreakOnCategory(Category, bEnable)
+      => ComCall(30, this.p, D3D12_MESSAGE_CATEGORY, Category, BOOL, bEnable)
+    SetBreakOnSeverity(Severity, bEnable)
+      => ComCall(31, this.p, D3D12_MESSAGE_SEVERITY, Severity, BOOL, bEnable)
+    SetBreakOnID(ID, bEnable)
+      => ComCall(32, this.p, D3D12_MESSAGE_ID, ID, BOOL, bEnable)
+    GetBreakOnCategory(Category)
+      => ComCall(33, this.p, D3D12_MESSAGE_CATEGORY, Category, BOOL)
+    GetBreakOnSeverity(Severity)
+      => ComCall(34, this.p, D3D12_MESSAGE_SEVERITY, Severity, BOOL)
+    GetBreakOnID(ID)
+      => ComCall(35, this.p, D3D12_MESSAGE_ID, ID, BOOL)
+    SetMuteDebugOutput(bMute)
+      => ComCall(36, this.p, BOOL, bMute, "void")
+    GetMuteDebugOutput()
+      => ComCall(37, this.p, BOOL)
+}
+struct D3D12_MESSAGE_CALLBACK_FLAGS extends Int32 {
+    static D3D12_MESSAGE_CALLBACK_FLAG_NONE := 0
+    static D3D12_MESSAGE_CALLBACK_IGNORE_FILTERS := 1
+}
+struct D3D12MessageFunc extends FunctionPointer {
+    static Types := [D3D12_MESSAGE_CATEGORY, D3D12_MESSAGE_SEVERITY, D3D12_MESSAGE_ID, PSTR, Struct.Ptr, "Void"]
+}
+struct ID3D12InfoQueue1 extends ID3D12InfoQueue {
+    static IID := "{2852DD88-B484-4C0C-B6B1-67168500E600}"
+    RegisterMessageCallback(CallbackFunc, CallbackFilterFlags, pContext, pCallbackCookie)
+      => ComCall(38, this.p, D3D12MessageFunc, CallbackFunc, D3D12_MESSAGE_CALLBACK_FLAGS, CallbackFilterFlags, Struct.Ptr, pContext, UInt32.Ptr, pCallbackCookie)
+    UnregisterMessageCallback(CallbackCookie)
+      => ComCall(39, this.p, UInt32, CallbackCookie)
+}
+struct PFN_D3D12_CREATE_DEVICE extends FunctionPointer {
+    static Types := [IUnknown, D3D_FEATURE_LEVEL, GUID.Ptr, Struct.Ptr.Ptr, HRESULT]
+}
+struct PFN_D3D12_GET_DEBUG_INTERFACE extends FunctionPointer {
+    static Types := [GUID.Ptr, Struct.Ptr.Ptr, HRESULT]
+}
+struct PFN_D3D12_GET_INTERFACE extends FunctionPointer {
+    static Types := [GUID.Ptr, GUID.Ptr, Struct.Ptr.Ptr, HRESULT]
+}
+struct ID3D12SDKConfiguration extends IUnknown {
+    static IID := "{E9EB5314-33AA-42B2-A718-D77F58B1F1C7}"
+    SetSDKVersion(SDKVersion, SDKPath)
+      => ComCall(3, this.p, UInt32, SDKVersion, PSTR, SDKPath)
+}
+struct ID3D12SDKConfiguration1 extends ID3D12SDKConfiguration {
+    static IID := "{8AAF9303-AD25-48B9-9A57-D9C37E009D9F}"
+    CreateDeviceFactory(SDKVersion, SDKPath, riid, ppvFactory)
+      => ComCall(4, this.p, UInt32, SDKVersion, PSTR, SDKPath, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvFactory)
+    FreeUnusedSDKs()
+      => ComCall(5, this.p, "void")
+}
+struct D3D12_DEVICE_FACTORY_FLAGS extends Int32 {
+    static D3D12_DEVICE_FACTORY_FLAG_NONE := 0
+    static D3D12_DEVICE_FACTORY_FLAG_ALLOW_RETURNING_EXISTING_DEVICE := 1
+    static D3D12_DEVICE_FACTORY_FLAG_ALLOW_RETURNING_INCOMPATIBLE_EXISTING_DEVICE := 2
+    static D3D12_DEVICE_FACTORY_FLAG_DISALLOW_STORING_NEW_DEVICE_AS_SINGLETON := 4
+}
+struct ID3D12DeviceFactory extends IUnknown {
+    static IID := "{61F307D3-D34E-4E7C-8374-3BA4DE23CCCB}"
+    InitializeFromGlobalState()
+      => ComCall(3, this.p)
+    ApplyToGlobalState()
+      => ComCall(4, this.p)
+    SetFlags(flags)
+      => ComCall(5, this.p, D3D12_DEVICE_FACTORY_FLAGS, flags)
+    GetFlags()
+      => ComCall(6, this.p, D3D12_DEVICE_FACTORY_FLAGS)
+    GetConfigurationInterface(clsid, iid, ppv)
+      => ComCall(7, this.p, GUID.Ptr, clsid, GUID.Ptr, iid, Struct.Ptr.Ptr, ppv)
+    EnableExperimentalFeatures(pIIDs, pConfigurationStructs?, pConfigurationStructSizes?)
+      => ComCall(8, this.p, UInt32, pConfigurationStructSizes?.Length ?? 0, GUID.Ptr, pIIDs, Struct.Ptr, pConfigurationStructs?, UInt32.Ptr, pConfigurationStructSizes?)
+    CreateDevice(adapter?, FeatureLevel, riid, ppvDevice?)
+      => ComCall(9, this.p, IUnknown, adapter?, D3D_FEATURE_LEVEL, FeatureLevel, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvDevice?)
+}
+struct D3D12_DEVICE_FLAGS extends Int32 {
+    static D3D12_DEVICE_FLAG_NONE := 0
+    static D3D12_DEVICE_FLAG_DEBUG_LAYER_ENABLED := 1
+    static D3D12_DEVICE_FLAG_GPU_BASED_VALIDATION_ENABLED := 2
+    static D3D12_DEVICE_FLAG_SYNCHRONIZED_COMMAND_QUEUE_VALIDATION_DISABLED := 4
+    static D3D12_DEVICE_FLAG_DRED_AUTO_BREADCRUMBS_ENABLED := 8
+    static D3D12_DEVICE_FLAG_DRED_PAGE_FAULT_REPORTING_ENABLED := 16
+    static D3D12_DEVICE_FLAG_DRED_WATSON_REPORTING_ENABLED := 32
+    static D3D12_DEVICE_FLAG_DRED_BREADCRUMB_CONTEXT_ENABLED := 64
+    static D3D12_DEVICE_FLAG_DRED_USE_MARKERS_ONLY_BREADCRUMBS := 128
+    static D3D12_DEVICE_FLAG_SHADER_INSTRUMENTATION_ENABLED := 256
+    static D3D12_DEVICE_FLAG_AUTO_DEBUG_NAME_ENABLED := 512
+    static D3D12_DEVICE_FLAG_FORCE_LEGACY_STATE_VALIDATION := 1024
+}
+struct D3D12_DEVICE_CONFIGURATION_DESC {
+    Flags : D3D12_DEVICE_FLAGS
+    GpuBasedValidationFlags : UInt32
+    SDKVersion : UInt32
+    NumEnabledExperimentalFeatures : UInt32
+}
+struct ID3D12DeviceConfiguration extends IUnknown {
+    static IID := "{78DBF87B-F766-422B-A61C-C8C446BDB9AD}"
+    GetDesc()
+      => ComCall(3, this.p, D3D12_DEVICE_CONFIGURATION_DESC)
+    GetEnabledExperimentalFeatures(pGuids)
+      => ComCall(4, this.p, GUID.Ptr, pGuids, UInt32, pGuids.Length)
+    SerializeVersionedRootSignature(pDesc, ppResult, ppError?)
+      => ComCall(5, this.p, D3D12_VERSIONED_ROOT_SIGNATURE_DESC.Ptr, pDesc, ID3DBlob.Ptr, ppResult, ID3DBlob.Ptr, ppError?)
+    CreateVersionedRootSignatureDeserializer(pBlob, riid, ppvDeserializer)
+      => ComCall(6, this.p, Struct.Ptr, pBlob, IntPtr, pBlob.Size, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvDeserializer)
+}
+struct ID3D12DeviceConfiguration1 extends ID3D12DeviceConfiguration {
+    static IID := "{ED342442-6343-4E16-BB82-A3A577874E56}"
+    CreateVersionedRootSignatureDeserializerFromSubobjectInLibrary(pLibraryBlob, RootSignatureSubobjectName, riid, ppvDeserializer)
+      => ComCall(7, this.p, Struct.Ptr, pLibraryBlob, IntPtr, pLibraryBlob.Size, "Str", RootSignatureSubobjectName, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvDeserializer)
+}
+struct D3D12_STATE_OBJECT_DATABASE_FLAGS extends Int32 {
+    static D3D12_STATE_OBJECT_DATABASE_FLAG_NONE := 0
+    static D3D12_STATE_OBJECT_DATABASE_FLAG_READ_ONLY := 1
+}
+struct ID3D12StateObjectDatabaseFactory extends IUnknown {
+    static IID := "{F5B066F0-648A-4611-BD41-27FD0948B9EB}"
+    CreateStateObjectDatabaseFromFile(pDatabaseFile, flags, riid, ppvStateObjectDatabase)
+      => ComCall(3, this.p, "Str", pDatabaseFile, D3D12_STATE_OBJECT_DATABASE_FLAGS, flags, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvStateObjectDatabase)
+}
+struct ID3D12ApplicationIdentity extends IUnknown {
+    static IID := "{82DC6C85-727B-4A8D-9169-DB6CE3E975A0}"
+    SetApplicationIdentity(pDesc, AppId)
+      => ComCall(3, this.p, D3D12_APPLICATION_DESC.Ptr, pDesc, GUID.Ptr, AppId)
+}
+struct D3D12_AXIS_SHADING_RATE extends Int32 {
+    static D3D12_AXIS_SHADING_RATE_1X := 0
+    static D3D12_AXIS_SHADING_RATE_2X := 1
+    static D3D12_AXIS_SHADING_RATE_4X := 2
+}
+struct D3D12_SHADING_RATE extends Int32 {
+    static D3D12_SHADING_RATE_1X1 := 0
+    static D3D12_SHADING_RATE_1X2 := 1
+    static D3D12_SHADING_RATE_2X1 := 4
+    static D3D12_SHADING_RATE_2X2 := 5
+    static D3D12_SHADING_RATE_2X4 := 6
+    static D3D12_SHADING_RATE_4X2 := 9
+    static D3D12_SHADING_RATE_4X4 := 10
+}
+struct D3D12_SHADING_RATE_COMBINER extends Int32 {
+    static D3D12_SHADING_RATE_COMBINER_PASSTHROUGH := 0
+    static D3D12_SHADING_RATE_COMBINER_OVERRIDE := 1
+    static D3D12_SHADING_RATE_COMBINER_MIN := 2
+    static D3D12_SHADING_RATE_COMBINER_MAX := 3
+    static D3D12_SHADING_RATE_COMBINER_SUM := 4
+}
+struct ID3D12GraphicsCommandList5 extends ID3D12GraphicsCommandList4 {
+    static IID := "{55050859-4024-474C-87F5-6472EAEE44EA}"
+    RSSetShadingRate(baseShadingRate, combiners?)
+      => ComCall(77, this.p, D3D12_SHADING_RATE, baseShadingRate, D3D12_SHADING_RATE_COMBINER.Ptr, combiners?, "void")
+    RSSetShadingRateImage(shadingRateImage?)
+      => ComCall(78, this.p, ID3D12Resource, shadingRateImage?, "void")
+}
+struct D3D12_DISPATCH_MESH_ARGUMENTS {
+    ThreadGroupCountX : UInt32
+    ThreadGroupCountY : UInt32
+    ThreadGroupCountZ : UInt32
+}
+struct ID3D12GraphicsCommandList6 extends ID3D12GraphicsCommandList5 {
+    static IID := "{C3827890-E548-4CFA-96CF-5689A9370F80}"
+    DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ)
+      => ComCall(79, this.p, UInt32, ThreadGroupCountX, UInt32, ThreadGroupCountY, UInt32, ThreadGroupCountZ, "void")
+}
+struct ID3D12GraphicsCommandList7 extends ID3D12GraphicsCommandList6 {
+    static IID := "{DD171223-8B61-4769-90E3-160CCDE4E2C1}"
+    Barrier(pBarrierGroups)
+      => ComCall(80, this.p, UInt32, pBarrierGroups.Length, D3D12_BARRIER_GROUP.Ptr, pBarrierGroups, "void")
+}
+struct ID3D12GraphicsCommandList8 extends ID3D12GraphicsCommandList7 {
+    static IID := "{EE936EF9-599D-4D28-938E-23C4AD05CE51}"
+    OMSetFrontAndBackStencilRef(FrontStencilRef, BackStencilRef)
+      => ComCall(81, this.p, UInt32, FrontStencilRef, UInt32, BackStencilRef, "void")
+}
+struct ID3D12GraphicsCommandList9 extends ID3D12GraphicsCommandList8 {
+    static IID := "{34ED2808-FFE6-4C2B-B11A-CABD2B0C59E1}"
+    RSSetDepthBias(DepthBias, DepthBiasClamp, SlopeScaledDepthBias)
+      => ComCall(82, this.p, Float32, DepthBias, Float32, DepthBiasClamp, Float32, SlopeScaledDepthBias, "void")
+    IASetIndexBufferStripCutValue(IBStripCutValue)
+      => ComCall(83, this.p, D3D12_INDEX_BUFFER_STRIP_CUT_VALUE, IBStripCutValue, "void")
+}
+struct ID3D12GraphicsCommandList10 extends ID3D12GraphicsCommandList9 {
+    static IID := "{7013C015-D161-4B63-A08C-238552DD8ACC}"
+    SetProgram(pDesc)
+      => ComCall(84, this.p, D3D12_SET_PROGRAM_DESC.Ptr, pDesc, "void")
+    DispatchGraph(pDesc)
+      => ComCall(85, this.p, D3D12_DISPATCH_GRAPH_DESC.Ptr, pDesc, "void")
+}
+struct ID3D12DSRDeviceFactory extends IUnknown {
+    static IID := "{F343D1A0-AFE3-439F-B13D-CD87A43B70CA}"
+    CreateDSRDevice(pD3D12Device, NodeMask, riid, ppvDSRDevice)
+      => ComCall(3, this.p, ID3D12Device, pD3D12Device, UInt32, NodeMask, GUID.Ptr, riid, Struct.Ptr.Ptr, ppvDSRDevice)
+}
+struct ID3D12GBVDiagnostics extends IUnknown {
+    static IID := "{597985AB-9B75-4DBB-BE23-0761195BEBEE}"
+    GetGBVEntireSubresourceStatesData(pResource, pData)
+      => ComCall(3, this.p, ID3D12Resource, pResource, Int32.Ptr, pData, UInt32, pData.Size)
+    GetGBVSubresourceState(pResource, Subresource, pData)
+      => ComCall(4, this.p, ID3D12Resource, pResource, UInt32, Subresource, Int32.Ptr, pData)
+    GetGBVResourceUniformState(pResource, pData)
+      => ComCall(5, this.p, ID3D12Resource, pResource, Int32.Ptr, pData)
+    GetGBVResourceInfo(pResource, pResourceDesc?, pResourceHash?, pSubresourceStatesByteOffset?)
+      => ComCall(6, this.p, ID3D12Resource, pResource, D3D12_RESOURCE_DESC.Ptr, pResourceDesc?, UInt32.Ptr, pResourceHash?, UInt32.Ptr, pSubresourceStatesByteOffset?)
+    GBVReserved0()
+      => ComCall(7, this.p, "void")
+    GBVReserved1()
+      => ComCall(8, this.p, "void")
+}
+struct D3D12_CREATE_STATE_OBJECT_STATISTICS {
+    NumCreated : UInt32
+    NumPSDBCacheMissed : UInt32
+    NumTotalCacheMissed : UInt32
+    NumCacheUnknown : UInt32
+}
+struct D3D12_STATE_OBJECT_STATISTICS {
+    DefaultPSDBRegistered : BOOL
+    PipelineStateObjectStatistics : D3D12_CREATE_STATE_OBJECT_STATISTICS
+    StateObjectStatistics : D3D12_CREATE_STATE_OBJECT_STATISTICS
+}
+struct ID3D12DeviceStatistics extends IUnknown {
+    static IID := "{3D5CA1A8-A39E-4619-95E0-F9B0A40340F5}"
+    GetStateObjectStatistics(pStatistics)
+      => ComCall(3, this.p, D3D12_STATE_OBJECT_STATISTICS.Ptr, pStatistics)
+}
+struct D3D12_SHADER_VERSION_TYPE extends Int32 {
+    static D3D12_SHVER_PIXEL_SHADER := 0
+    static D3D12_SHVER_VERTEX_SHADER := 1
+    static D3D12_SHVER_GEOMETRY_SHADER := 2
+    static D3D12_SHVER_HULL_SHADER := 3
+    static D3D12_SHVER_DOMAIN_SHADER := 4
+    static D3D12_SHVER_COMPUTE_SHADER := 5
+    static D3D12_SHVER_LIBRARY := 6
+    static D3D12_SHVER_RAY_GENERATION_SHADER := 7
+    static D3D12_SHVER_INTERSECTION_SHADER := 8
+    static D3D12_SHVER_ANY_HIT_SHADER := 9
+    static D3D12_SHVER_CLOSEST_HIT_SHADER := 10
+    static D3D12_SHVER_MISS_SHADER := 11
+    static D3D12_SHVER_CALLABLE_SHADER := 12
+    static D3D12_SHVER_MESH_SHADER := 13
+    static D3D12_SHVER_AMPLIFICATION_SHADER := 14
+    static D3D12_SHVER_NODE_SHADER := 15
+    static D3D12_SHVER_RESERVED0 := 65520
+}
+struct D3D12_SIGNATURE_PARAMETER_DESC {
+    SemanticName : PSTR
+    SemanticIndex : UInt32
+    Register : UInt32
+    SystemValueType : D3D_NAME
+    ComponentType : D3D_REGISTER_COMPONENT_TYPE
+    Mask : UInt8
+    ReadWriteMask : UInt8
+    Stream : UInt32
+    MinPrecision : D3D_MIN_PRECISION
+}
+struct D3D12_SHADER_BUFFER_DESC {
+    Name : PSTR
+    Type : D3D_CBUFFER_TYPE
+    Variables : UInt32
+    Size : UInt32
+    uFlags : UInt32
+}
+struct D3D12_SHADER_VARIABLE_DESC {
+    Name : PSTR
+    StartOffset : UInt32
+    Size : UInt32
+    uFlags : UInt32
+    DefaultValue : Struct.Ptr
+    StartTexture : UInt32
+    TextureSize : UInt32
+    StartSampler : UInt32
+    SamplerSize : UInt32
+}
+struct D3D12_SHADER_TYPE_DESC {
+    Class : D3D_SHADER_VARIABLE_CLASS
+    Type : D3D_SHADER_VARIABLE_TYPE
+    Rows : UInt32
+    Columns : UInt32
+    Elements : UInt32
+    Members : UInt32
+    Offset : UInt32
+    Name : PSTR
+}
+struct D3D12_SHADER_DESC {
+    Version : UInt32
+    Creator : PSTR
+    Flags : UInt32
+    ConstantBuffers : UInt32
+    BoundResources : UInt32
+    InputParameters : UInt32
+    OutputParameters : UInt32
+    InstructionCount : UInt32
+    TempRegisterCount : UInt32
+    TempArrayCount : UInt32
+    DefCount : UInt32
+    DclCount : UInt32
+    TextureNormalInstructions : UInt32
+    TextureLoadInstructions : UInt32
+    TextureCompInstructions : UInt32
+    TextureBiasInstructions : UInt32
+    TextureGradientInstructions : UInt32
+    FloatInstructionCount : UInt32
+    IntInstructionCount : UInt32
+    UintInstructionCount : UInt32
+    StaticFlowControlCount : UInt32
+    DynamicFlowControlCount : UInt32
+    MacroInstructionCount : UInt32
+    ArrayInstructionCount : UInt32
+    CutInstructionCount : UInt32
+    EmitInstructionCount : UInt32
+    GSOutputTopology : D3D_PRIMITIVE_TOPOLOGY
+    GSMaxOutputVertexCount : UInt32
+    InputPrimitive : D3D_PRIMITIVE
+    PatchConstantParameters : UInt32
+    cGSInstanceCount : UInt32
+    cControlPoints : UInt32
+    HSOutputPrimitive : D3D_TESSELLATOR_OUTPUT_PRIMITIVE
+    HSPartitioning : D3D_TESSELLATOR_PARTITIONING
+    TessellatorDomain : D3D_TESSELLATOR_DOMAIN
+    cBarrierInstructions : UInt32
+    cInterlockedInstructions : UInt32
+    cTextureStoreInstructions : UInt32
+}
+struct D3D12_SHADER_INPUT_BIND_DESC {
+    Name : PSTR
+    Type : D3D_SHADER_INPUT_TYPE
+    BindPoint : UInt32
+    BindCount : UInt32
+    uFlags : UInt32
+    ReturnType : D3D_RESOURCE_RETURN_TYPE
+    Dimension : D3D_SRV_DIMENSION
+    NumSamples : UInt32
+    Space : UInt32
+    uID : UInt32
+}
+struct D3D12_LIBRARY_DESC {
+    Creator : PSTR
+    Flags : UInt32
+    FunctionCount : UInt32
+}
+struct D3D12_FUNCTION_DESC {
+    Version : UInt32
+    Creator : PSTR
+    Flags : UInt32
+    ConstantBuffers : UInt32
+    BoundResources : UInt32
+    InstructionCount : UInt32
+    TempRegisterCount : UInt32
+    TempArrayCount : UInt32
+    DefCount : UInt32
+    DclCount : UInt32
+    TextureNormalInstructions : UInt32
+    TextureLoadInstructions : UInt32
+    TextureCompInstructions : UInt32
+    TextureBiasInstructions : UInt32
+    TextureGradientInstructions : UInt32
+    FloatInstructionCount : UInt32
+    IntInstructionCount : UInt32
+    UintInstructionCount : UInt32
+    StaticFlowControlCount : UInt32
+    DynamicFlowControlCount : UInt32
+    MacroInstructionCount : UInt32
+    ArrayInstructionCount : UInt32
+    MovInstructionCount : UInt32
+    MovcInstructionCount : UInt32
+    ConversionInstructionCount : UInt32
+    BitwiseInstructionCount : UInt32
+    MinFeatureLevel : D3D_FEATURE_LEVEL
+    RequiredFeatureFlags : Int64
+    Name : PSTR
+    FunctionParameterCount : Int32
+    HasReturn : BOOL
+    Has10Level9VertexShader : BOOL
+    Has10Level9PixelShader : BOOL
+}
+struct D3D12_PARAMETER_DESC {
+    Name : PSTR
+    SemanticName : PSTR
+    Type : D3D_SHADER_VARIABLE_TYPE
+    Class : D3D_SHADER_VARIABLE_CLASS
+    Rows : UInt32
+    Columns : UInt32
+    InterpolationMode : D3D_INTERPOLATION_MODE
+    Flags : D3D_PARAMETER_FLAGS
+    FirstInRegister : UInt32
+    FirstInComponent : UInt32
+    FirstOutRegister : UInt32
+    FirstOutComponent : UInt32
+}
+struct ID3D12ShaderReflectionType extends InterfacePointer {
+    static IID := "{E913C351-783D-48CA-A1D1-4F306284AD56}"
+    GetDesc(pDesc)
+      => ComCall(0, this.p, D3D12_SHADER_TYPE_DESC.Ptr, pDesc)
+    GetMemberTypeByIndex(Index)
+      => ComCall(1, this.p, UInt32, Index, ID3D12ShaderReflectionType)
+    GetMemberTypeByName(Name)
+      => ComCall(2, this.p, PSTR, Name, ID3D12ShaderReflectionType)
+    GetMemberTypeName(Index)
+      => ComCall(3, this.p, UInt32, Index, PSTR)
+    IsEqual(pType)
+      => ComCall(4, this.p, ID3D12ShaderReflectionType, pType)
+    GetSubType()
+      => ComCall(5, this.p, ID3D12ShaderReflectionType)
+    GetBaseClass()
+      => ComCall(6, this.p, ID3D12ShaderReflectionType)
+    GetNumInterfaces()
+      => ComCall(7, this.p, UInt32)
+    GetInterfaceByIndex(uIndex)
+      => ComCall(8, this.p, UInt32, uIndex, ID3D12ShaderReflectionType)
+    IsOfType(pType)
+      => ComCall(9, this.p, ID3D12ShaderReflectionType, pType)
+    ImplementsInterface(pBase)
+      => ComCall(10, this.p, ID3D12ShaderReflectionType, pBase)
+}
+struct ID3D12ShaderReflectionVariable extends InterfacePointer {
+    static IID := "{8337A8A6-A216-444A-B2F4-314733A73AEA}"
+    GetDesc(pDesc)
+      => ComCall(0, this.p, D3D12_SHADER_VARIABLE_DESC.Ptr, pDesc)
+    GetType()
+      => ComCall(1, this.p, ID3D12ShaderReflectionType)
+    GetBuffer()
+      => ComCall(2, this.p, ID3D12ShaderReflectionConstantBuffer)
+    GetInterfaceSlot(uArrayIndex)
+      => ComCall(3, this.p, UInt32, uArrayIndex, UInt32)
+}
+struct ID3D12ShaderReflectionConstantBuffer extends InterfacePointer {
+    static IID := "{C59598B4-48B3-4869-B9B1-B1618B14A8B7}"
+    GetDesc(pDesc)
+      => ComCall(0, this.p, D3D12_SHADER_BUFFER_DESC.Ptr, pDesc)
+    GetVariableByIndex(Index)
+      => ComCall(1, this.p, UInt32, Index, ID3D12ShaderReflectionVariable)
+    GetVariableByName(Name)
+      => ComCall(2, this.p, PSTR, Name, ID3D12ShaderReflectionVariable)
+}
+struct ID3D12ShaderReflection extends IUnknown {
+    static IID := "{5A58797D-A72C-478D-8BA2-EFC6B0EFE88E}"
+    GetDesc(pDesc)
+      => ComCall(3, this.p, D3D12_SHADER_DESC.Ptr, pDesc)
+    GetConstantBufferByIndex(Index)
+      => ComCall(4, this.p, UInt32, Index, ID3D12ShaderReflectionConstantBuffer)
+    GetConstantBufferByName(Name)
+      => ComCall(5, this.p, PSTR, Name, ID3D12ShaderReflectionConstantBuffer)
+    GetResourceBindingDesc(ResourceIndex, pDesc)
+      => ComCall(6, this.p, UInt32, ResourceIndex, D3D12_SHADER_INPUT_BIND_DESC.Ptr, pDesc)
+    GetInputParameterDesc(ParameterIndex, pDesc)
+      => ComCall(7, this.p, UInt32, ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC.Ptr, pDesc)
+    GetOutputParameterDesc(ParameterIndex, pDesc)
+      => ComCall(8, this.p, UInt32, ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC.Ptr, pDesc)
+    GetPatchConstantParameterDesc(ParameterIndex, pDesc)
+      => ComCall(9, this.p, UInt32, ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC.Ptr, pDesc)
+    GetVariableByName(Name)
+      => ComCall(10, this.p, PSTR, Name, ID3D12ShaderReflectionVariable)
+    GetResourceBindingDescByName(Name, pDesc)
+      => ComCall(11, this.p, PSTR, Name, D3D12_SHADER_INPUT_BIND_DESC.Ptr, pDesc)
+    GetMovInstructionCount()
+      => ComCall(12, this.p, UInt32)
+    GetMovcInstructionCount()
+      => ComCall(13, this.p, UInt32)
+    GetConversionInstructionCount()
+      => ComCall(14, this.p, UInt32)
+    GetBitwiseInstructionCount()
+      => ComCall(15, this.p, UInt32)
+    GetGSInputPrimitive()
+      => ComCall(16, this.p, D3D_PRIMITIVE)
+    IsSampleFrequencyShader()
+      => ComCall(17, this.p, BOOL)
+    GetNumInterfaceSlots()
+      => ComCall(18, this.p, UInt32)
+    GetMinFeatureLevel(pLevel)
+      => ComCall(19, this.p, D3D_FEATURE_LEVEL.Ptr, pLevel)
+    GetThreadGroupSize(pSizeX?, pSizeY?, pSizeZ?)
+      => ComCall(20, this.p, UInt32.Ptr, pSizeX?, UInt32.Ptr, pSizeY?, UInt32.Ptr, pSizeZ?, UInt32)
+    GetRequiresFlags()
+      => ComCall(21, this.p, Int64)
+}
+struct ID3D12LibraryReflection extends IUnknown {
+    static IID := "{8E349D19-54DB-4A56-9DC9-119D87BDB804}"
+    GetDesc(pDesc)
+      => ComCall(3, this.p, D3D12_LIBRARY_DESC.Ptr, pDesc)
+    GetFunctionByIndex(FunctionIndex)
+      => ComCall(4, this.p, Int32, FunctionIndex, ID3D12FunctionReflection)
+}
+struct ID3D12FunctionReflection extends InterfacePointer {
+    static IID := "{1108795C-2772-4BA9-B2A8-D464DC7E2799}"
+    GetDesc(pDesc)
+      => ComCall(0, this.p, D3D12_FUNCTION_DESC.Ptr, pDesc)
+    GetConstantBufferByIndex(BufferIndex)
+      => ComCall(1, this.p, UInt32, BufferIndex, ID3D12ShaderReflectionConstantBuffer)
+    GetConstantBufferByName(Name)
+      => ComCall(2, this.p, PSTR, Name, ID3D12ShaderReflectionConstantBuffer)
+    GetResourceBindingDesc(ResourceIndex, pDesc)
+      => ComCall(3, this.p, UInt32, ResourceIndex, D3D12_SHADER_INPUT_BIND_DESC.Ptr, pDesc)
+    GetVariableByName(Name)
+      => ComCall(4, this.p, PSTR, Name, ID3D12ShaderReflectionVariable)
+    GetResourceBindingDescByName(Name, pDesc)
+      => ComCall(5, this.p, PSTR, Name, D3D12_SHADER_INPUT_BIND_DESC.Ptr, pDesc)
+    GetFunctionParameter(ParameterIndex)
+      => ComCall(6, this.p, Int32, ParameterIndex, ID3D12FunctionParameterReflection)
+}
+struct ID3D12FunctionParameterReflection extends InterfacePointer {
+    static IID := "{EC25F42D-7006-4F2B-B33E-02CC3375733F}"
+    GetDesc(pDesc)
+      => ComCall(0, this.p, D3D12_PARAMETER_DESC.Ptr, pDesc)
+}
+struct D3D12_ADAPTER_FAMILY {
+    szAdapterFamily : UInt16[128]
+}
+struct PFN_D3D12_COMPILER_CREATE_FACTORY extends FunctionPointer {
+    static Types := [PWSTR, GUID.Ptr, Struct.Ptr.Ptr, HRESULT]
+}
+struct PFN_D3D12_COMPILER_SERIALIZE_VERSIONED_ROOT_SIGNATURE extends FunctionPointer {
+    static Types := [D3D12_VERSIONED_ROOT_SIGNATURE_DESC.Ptr, ID3DBlob.Ptr, ID3DBlob.Ptr, HRESULT]
+}
+struct ID3D12CompilerFactoryChild extends IUnknown {
+    static IID := "{E0D06420-9F31-47E8-AE9A-DD2BA25AC0BC}"
+    GetFactory(riid, ppCompilerFactory)
+      => ComCall(3, this.p, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCompilerFactory)
+}
+struct D3D12_COMPILER_VALUE_TYPE extends Int32 {
+    static D3D12_COMPILER_VALUE_TYPE_OBJECT_CODE := 0
+    static D3D12_COMPILER_VALUE_TYPE_METADATA := 1
+    static D3D12_COMPILER_VALUE_TYPE_DEBUG_PDB := 2
+    static D3D12_COMPILER_VALUE_TYPE_PERFORMANCE_DATA := 3
+}
+struct D3D12_COMPILER_VALUE_TYPE_FLAGS extends Int32 {
+    static D3D12_COMPILER_VALUE_TYPE_FLAGS_NONE := 0
+    static D3D12_COMPILER_VALUE_TYPE_FLAGS_OBJECT_CODE := 1
+    static D3D12_COMPILER_VALUE_TYPE_FLAGS_METADATA := 2
+    static D3D12_COMPILER_VALUE_TYPE_FLAGS_DEBUG_PDB := 4
+    static D3D12_COMPILER_VALUE_TYPE_FLAGS_PERFORMANCE_DATA := 8
+}
+struct D3D12_COMPILER_DATABASE_PATH {
+    Types : D3D12_COMPILER_VALUE_TYPE_FLAGS
+    pPath : PWSTR
+}
+struct D3D12_COMPILER_CACHE_GROUP_KEY {
+    pKey : Struct.Ptr
+    KeySize : UInt32
+}
+struct D3D12_COMPILER_CACHE_VALUE_KEY {
+    pKey : Struct.Ptr
+    KeySize : UInt32
+}
+struct D3D12_COMPILER_CACHE_VALUE {
+    pValue : Struct.Ptr
+    ValueSize : UInt32
+}
+struct D3D12_COMPILER_CACHE_TYPED_VALUE {
+    Type : D3D12_COMPILER_VALUE_TYPE
+    Value : D3D12_COMPILER_CACHE_VALUE
+}
+struct D3D12_COMPILER_CACHE_CONST_VALUE {
+    pValue : Struct.Ptr
+    ValueSize : UInt32
+}
+struct D3D12_COMPILER_CACHE_TYPED_CONST_VALUE {
+    Type : D3D12_COMPILER_VALUE_TYPE
+    Value : D3D12_COMPILER_CACHE_CONST_VALUE
+}
+struct D3D12_COMPILER_TARGET {
+    AdapterFamilyIndex : UInt32
+    ABIVersion : Int64
+}
+struct D3D12CompilerCacheSessionAllocationFunc extends FunctionPointer {
+    static Types := [IntPtr, Struct.Ptr, Struct.Ptr]
+}
+struct D3D12CompilerCacheSessionGroupValueKeysFunc extends FunctionPointer {
+    static Types := [D3D12_COMPILER_CACHE_VALUE_KEY.Ptr, Struct.Ptr, "Void"]
+}
+struct D3D12CompilerCacheSessionGroupValuesFunc extends FunctionPointer {
+    static Types := [UInt32, D3D12_COMPILER_CACHE_TYPED_CONST_VALUE.Ptr, Struct.Ptr, "Void"]
+}
+struct ID3D12CompilerCacheSession extends ID3D12CompilerFactoryChild {
+    static IID := "{5704E5E6-054B-4738-B661-7B0D68D8DDE2}"
+    FindGroup(pGroupKey, pGroupVersion?)
+      => ComCall(4, this.p, D3D12_COMPILER_CACHE_GROUP_KEY.Ptr, pGroupKey, UInt32.Ptr, pGroupVersion?)
+    FindGroupValueKeys(pGroupKey, pExpectedGroupVersion?, CallbackFunc, pContext?)
+      => ComCall(5, this.p, D3D12_COMPILER_CACHE_GROUP_KEY.Ptr, pGroupKey, UInt32.Ptr, pExpectedGroupVersion?, D3D12CompilerCacheSessionGroupValueKeysFunc, CallbackFunc, Struct.Ptr, pContext?)
+    FindGroupValues(pGroupKey, pExpectedGroupVersion?, ValueTypeFlags, CallbackFunc?, pContext?)
+      => ComCall(6, this.p, D3D12_COMPILER_CACHE_GROUP_KEY.Ptr, pGroupKey, UInt32.Ptr, pExpectedGroupVersion?, D3D12_COMPILER_VALUE_TYPE_FLAGS, ValueTypeFlags, D3D12CompilerCacheSessionGroupValuesFunc, CallbackFunc?, Struct.Ptr, pContext?)
+    FindValue(pValueKey, pTypedValues, pCallbackFunc?, pContext?)
+      => ComCall(7, this.p, D3D12_COMPILER_CACHE_VALUE_KEY.Ptr, pValueKey, D3D12_COMPILER_CACHE_TYPED_VALUE.Ptr, pTypedValues, UInt32, pTypedValues.Length, D3D12CompilerCacheSessionAllocationFunc, pCallbackFunc?, Struct.Ptr, pContext?)
+    GetApplicationDesc()
+      => ComCall(8, this.p, D3D12_APPLICATION_DESC.Ptr)
+    GetCompilerTarget()
+      => ComCall(9, this.p, D3D12_COMPILER_TARGET)
+    GetValueTypes()
+      => ComCall(10, this.p, D3D12_COMPILER_VALUE_TYPE_FLAGS)
+    StoreGroupValueKeys(pGroupKey, GroupVersion, pValueKeys)
+      => ComCall(11, this.p, D3D12_COMPILER_CACHE_GROUP_KEY.Ptr, pGroupKey, UInt32, GroupVersion, D3D12_COMPILER_CACHE_VALUE_KEY.Ptr, pValueKeys, UInt32, pValueKeys.Length)
+    StoreValue(pValueKey, pTypedValues)
+      => ComCall(12, this.p, D3D12_COMPILER_CACHE_VALUE_KEY.Ptr, pValueKey, D3D12_COMPILER_CACHE_TYPED_CONST_VALUE.Ptr, pTypedValues, UInt32, pTypedValues.Length)
+}
+struct ID3D12CompilerStateObject extends IUnknown {
+    static IID := "{5981CCA4-E8AE-44CA-9B92-4FA86F5A3A3A}"
+    GetCompiler(riid, ppCompiler)
+      => ComCall(3, this.p, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCompiler)
+}
+struct D3D12_COMPILER_EXISTING_COLLECTION_DESC {
+    pExistingCollection : ID3D12CompilerStateObject
+    NumExports : UInt32
+    pExports : D3D12_EXPORT_DESC.Ptr
+}
+struct ID3D12Compiler extends ID3D12CompilerFactoryChild {
+    static IID := "{8C403C12-993B-4583-80F1-6824138FA68E}"
+    CompilePipelineState(pGroupKey, GroupVersion, pDesc)
+      => ComCall(4, this.p, D3D12_COMPILER_CACHE_GROUP_KEY.Ptr, pGroupKey, UInt32, GroupVersion, D3D12_PIPELINE_STATE_STREAM_DESC.Ptr, pDesc)
+    CompileStateObject(pGroupKey, GroupVersion, pDesc, riid, ppCompilerStateObject)
+      => ComCall(5, this.p, D3D12_COMPILER_CACHE_GROUP_KEY.Ptr, pGroupKey, UInt32, GroupVersion, D3D12_STATE_OBJECT_DESC.Ptr, pDesc, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCompilerStateObject)
+    CompileAddToStateObject(pGroupKey, GroupVersion, pAddition, pCompilerStateObjectToGrowFrom, riid, ppNewCompilerStateObject)
+      => ComCall(6, this.p, D3D12_COMPILER_CACHE_GROUP_KEY.Ptr, pGroupKey, UInt32, GroupVersion, D3D12_STATE_OBJECT_DESC.Ptr, pAddition, ID3D12CompilerStateObject, pCompilerStateObjectToGrowFrom, GUID.Ptr, riid, Struct.Ptr.Ptr, ppNewCompilerStateObject)
+    GetCacheSession(riid, ppCompilerCacheSession)
+      => ComCall(7, this.p, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCompilerCacheSession)
+}
+struct ID3D12CompilerFactory extends IUnknown {
+    static IID := "{C1EE4B59-3F59-47A5-9B4E-A855C858A878}"
+    EnumerateAdapterFamilies(AdapterFamilyIndex, pAdapterFamily)
+      => ComCall(3, this.p, UInt32, AdapterFamilyIndex, D3D12_ADAPTER_FAMILY.Ptr, pAdapterFamily)
+    EnumerateAdapterFamilyABIVersions(AdapterFamilyIndex, pABIVersions?)
+      => ComCall(4, this.p, UInt32, AdapterFamilyIndex, UInt32.Ptr, pABIVersions?.Length ?? 0, Int64.Ptr, pABIVersions?)
+    EnumerateAdapterFamilyCompilerVersion(AdapterFamilyIndex, pCompilerVersion)
+      => ComCall(5, this.p, UInt32, AdapterFamilyIndex, D3D12_VERSION_NUMBER.Ptr, pCompilerVersion)
+    GetApplicationProfileVersion(pTarget, pApplicationDesc, pApplicationProfileVersion)
+      => ComCall(6, this.p, D3D12_COMPILER_TARGET.Ptr, pTarget, D3D12_APPLICATION_DESC.Ptr, pApplicationDesc, D3D12_VERSION_NUMBER.Ptr, pApplicationProfileVersion)
+    CreateCompilerCacheSession(pPaths, pTarget?, pApplicationDesc?, riid, ppCompilerCacheSession)
+      => ComCall(7, this.p, D3D12_COMPILER_DATABASE_PATH.Ptr, pPaths, UInt32, pPaths.Length, D3D12_COMPILER_TARGET.Ptr, pTarget?, D3D12_APPLICATION_DESC.Ptr, pApplicationDesc?, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCompilerCacheSession)
+    CreateCompiler(pCompilerCacheSession, riid, ppCompiler)
+      => ComCall(8, this.p, ID3D12CompilerCacheSession, pCompilerCacheSession, GUID.Ptr, riid, Struct.Ptr.Ptr, ppCompiler)
+}

@@ -1,0 +1,31 @@
+﻿#Requires AutoHotkey v2.1-alpha.37
+#Include "..\_header.ahk"
+#Import "Types.ahk" {*}
+#Import "..\Foundation\Types.ahk" {HRESULT, PSTR}
+
+WebSocketAbortHandle(hWebSocket)
+  => DllCall("websocket.dll\WebSocketAbortHandle", WEB_SOCKET_HANDLE, hWebSocket, "void")
+WebSocketBeginClientHandshake(hWebSocket, pszSubprotocols?, pszExtensions?, pInitialHeaders?, pAdditionalHeaders)
+  => DllCall("websocket.dll\WebSocketBeginClientHandshake", WEB_SOCKET_HANDLE, hWebSocket, PSTR.Ptr, pszSubprotocols?, UInt32, pszSubprotocols?.Length ?? 0, PSTR.Ptr, pszExtensions?, UInt32, pszExtensions?.Length ?? 0, WEB_SOCKET_HTTP_HEADER.Ptr, pInitialHeaders?, UInt32, pInitialHeaders?.Length ?? 0, WEB_SOCKET_HTTP_HEADER.Ptr.Ptr, pAdditionalHeaders, UInt32.Ptr, pAdditionalHeaders.Length, "HRESULT")
+WebSocketBeginServerHandshake(hWebSocket, pszSubprotocolSelected?, pszExtensionSelected?, pRequestHeaders, pResponseHeaders)
+  => DllCall("websocket.dll\WebSocketBeginServerHandshake", WEB_SOCKET_HANDLE, hWebSocket, PSTR, pszSubprotocolSelected?, PSTR.Ptr, pszExtensionSelected?, UInt32, pszExtensionSelected?.Length ?? 0, WEB_SOCKET_HTTP_HEADER.Ptr, pRequestHeaders, UInt32, pRequestHeaders.Length, WEB_SOCKET_HTTP_HEADER.Ptr.Ptr, pResponseHeaders, UInt32.Ptr, pResponseHeaders.Length, "HRESULT")
+WebSocketCompleteAction(hWebSocket, pvActionContext, ulBytesTransferred)
+  => DllCall("websocket.dll\WebSocketCompleteAction", WEB_SOCKET_HANDLE, hWebSocket, Struct.Ptr, pvActionContext, UInt32, ulBytesTransferred, "void")
+WebSocketCreateClientHandle(pProperties, phWebSocket)
+  => DllCall("websocket.dll\WebSocketCreateClientHandle", WEB_SOCKET_PROPERTY.Ptr, pProperties, UInt32, pProperties.Length, WEB_SOCKET_HANDLE.Ptr, phWebSocket, "HRESULT")
+WebSocketCreateServerHandle(pProperties, phWebSocket)
+  => DllCall("websocket.dll\WebSocketCreateServerHandle", WEB_SOCKET_PROPERTY.Ptr, pProperties, UInt32, pProperties.Length, WEB_SOCKET_HANDLE.Ptr, phWebSocket, "HRESULT")
+WebSocketDeleteHandle(hWebSocket)
+  => DllCall("websocket.dll\WebSocketDeleteHandle", WEB_SOCKET_HANDLE, hWebSocket, "void")
+WebSocketEndClientHandshake(hWebSocket, pResponseHeaders, pulSelectedExtensions?, pulSelectedSubprotocol?)
+  => DllCall("websocket.dll\WebSocketEndClientHandshake", WEB_SOCKET_HANDLE, hWebSocket, WEB_SOCKET_HTTP_HEADER.Ptr, pResponseHeaders, UInt32, pResponseHeaders.Length, UInt32.Ptr, pulSelectedExtensions?, UInt32.Ptr, pulSelectedExtensions?.Length ?? 0, UInt32.Ptr, pulSelectedSubprotocol?, "HRESULT")
+WebSocketEndServerHandshake(hWebSocket)
+  => DllCall("websocket.dll\WebSocketEndServerHandshake", WEB_SOCKET_HANDLE, hWebSocket, "HRESULT")
+WebSocketGetAction(hWebSocket, eActionQueue, pDataBuffers, pAction, pBufferType, pvApplicationContext?, pvActionContext)
+  => DllCall("websocket.dll\WebSocketGetAction", WEB_SOCKET_HANDLE, hWebSocket, WEB_SOCKET_ACTION_QUEUE, eActionQueue, WEB_SOCKET_BUFFER.Ptr, pDataBuffers, UInt32.Ptr, pDataBuffers.Length, WEB_SOCKET_ACTION.Ptr, pAction, WEB_SOCKET_BUFFER_TYPE.Ptr, pBufferType, Struct.Ptr.Ptr, pvApplicationContext?, Struct.Ptr.Ptr, pvActionContext, "HRESULT")
+WebSocketGetGlobalProperty(eType, pvValue)
+  => DllCall("websocket.dll\WebSocketGetGlobalProperty", WEB_SOCKET_PROPERTY_TYPE, eType, Struct.Ptr, pvValue, UInt32.Ptr, pvValue.Length, "HRESULT")
+WebSocketReceive(hWebSocket, pBuffer?, pvContext?)
+  => DllCall("websocket.dll\WebSocketReceive", WEB_SOCKET_HANDLE, hWebSocket, WEB_SOCKET_BUFFER.Ptr, pBuffer?, Struct.Ptr, pvContext?, "HRESULT")
+WebSocketSend(hWebSocket, BufferType, pBuffer?, Context?)
+  => DllCall("websocket.dll\WebSocketSend", WEB_SOCKET_HANDLE, hWebSocket, WEB_SOCKET_BUFFER_TYPE, BufferType, WEB_SOCKET_BUFFER.Ptr, pBuffer?, Struct.Ptr, Context?, "HRESULT")

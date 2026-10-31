@@ -1,0 +1,2 @@
+﻿InertiaProcessor := "{ABB27087-4CE0-4E58-A0CB-E24DF96814BE}"
+ManipulationProcessor := "{597D4FB0-47FD-4AFF-89B9-C6CFAE8CF08E}"

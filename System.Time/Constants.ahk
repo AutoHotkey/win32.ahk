@@ -1,0 +1,11 @@
+﻿TIME_ZONE_ID_INVALID := 4294967295
+TSF_Authenticated := 2
+TSF_Hardware := 1
+TSF_IPv6 := 4
+TSF_SignatureAuthenticated := 8
+wszW32TimeRegKeyPolicyTimeProviders := "Software\Policies\Microsoft\W32Time\TimeProviders"
+wszW32TimeRegKeyTimeProviders := "System\CurrentControlSet\Services\W32Time\TimeProviders"
+wszW32TimeRegValueDllName := "DllName"
+wszW32TimeRegValueEnabled := "Enabled"
+wszW32TimeRegValueInputProvider := "InputProvider"
+wszW32TimeRegValueMetaDataProvider := "MetaDataProvider"

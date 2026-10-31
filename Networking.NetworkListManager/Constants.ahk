@@ -1,0 +1,16 @@
+﻿NA_AllowMerge := "NA_AllowMerge"
+NA_CategoryReadOnly := "NA_CategoryReadOnly"
+NA_CategorySetByPolicy := "NA_CategorySetByPolicy"
+NA_DescriptionReadOnly := "NA_DescriptionReadOnly"
+NA_DescriptionSetByPolicy := "NA_DescriptionSetByPolicy"
+NA_DomainAuthenticationFailed := "NA_DomainAuthenticationFailed"
+NA_IconReadOnly := "NA_IconReadOnly"
+NA_IconSetByPolicy := "NA_IconSetByPolicy"
+NA_InternetConnectivityV4 := "NA_InternetConnectivityV4"
+NA_InternetConnectivityV6 := "NA_InternetConnectivityV6"
+NA_NameReadOnly := "NA_NameReadOnly"
+NA_NameSetByPolicy := "NA_NameSetByPolicy"
+NA_NetworkClass := "NA_NetworkClass"
+NLM_MAX_ADDRESS_LIST_SIZE := 10
+NLM_UNKNOWN_DATAPLAN_STATUS := 4294967295
+NetworkListManager := "{DCB00C01-570F-4A9B-8D69-199FDBA5723B}"

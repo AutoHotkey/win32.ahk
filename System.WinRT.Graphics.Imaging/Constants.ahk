@@ -1,0 +1,1 @@
+﻿CLSID_SoftwareBitmapNativeFactory := "{84E65691-8602-4A84-BE46-708BE9CD4B74}"

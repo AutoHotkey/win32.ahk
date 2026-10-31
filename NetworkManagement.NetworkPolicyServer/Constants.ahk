@@ -1,0 +1,12 @@
+﻿AUTHSRV_AUTHORIZATION_VALUE_W := "AuthorizationDLLs"
+AUTHSRV_ENFORCE_NP_FOR_PAP_CHALLENGE_RESPONSE_VALUE_W := "EnforceNetworkPolicyForPAPBasedChallengeResponse"
+AUTHSRV_EXTENSIONS_VALUE_W := "ExtensionDLLs"
+AUTHSRV_PARAMETERS_KEY_W := "System\CurrentControlSet\Services\AuthSrv\Parameters"
+RADIUS_EXTENSION_FREE_ATTRIBUTES := "RadiusExtensionFreeAttributes"
+RADIUS_EXTENSION_INIT := "RadiusExtensionInit"
+RADIUS_EXTENSION_PROCESS := "RadiusExtensionProcess"
+RADIUS_EXTENSION_PROCESS2 := "RadiusExtensionProcess2"
+RADIUS_EXTENSION_PROCESS_EX := "RadiusExtensionProcessEx"
+RADIUS_EXTENSION_TERM := "RadiusExtensionTerm"
+RADIUS_EXTENSION_VERSION := 1
+SdoMachine := "{E9218AE7-9E91-11D1-BF60-0080C7846BC0}"

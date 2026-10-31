@@ -1,0 +1,15 @@
+﻿ComponentTypeEnforcementClientRp := 2
+ComponentTypeEnforcementClientSoH := 1
+failureCategoryCount := 5
+freshSoHRequest := 1
+maxConnectionCountPerEnforcer := 20
+maxEnforcerCount := 20
+maxNetworkSoHSize := 4000
+maxPrivateDataSize := 200
+maxSoHAttributeCount := 100
+maxSoHAttributeSize := 4000
+maxStringLength := 1024
+maxSystemHealthEntityCount := 20
+minNetworkSoHSize := 12
+percentageNotSupported := 101
+shaFixup := 1

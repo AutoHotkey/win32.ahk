@@ -1,0 +1,140 @@
+﻿#Requires AutoHotkey v2.1-alpha.37
+#Include "..\_header.ahk"
+
+struct XINPUT_VIRTUAL_KEY extends UInt16 {
+    static VK_PAD_A := 22528
+    static VK_PAD_B := 22529
+    static VK_PAD_X := 22530
+    static VK_PAD_Y := 22531
+    static VK_PAD_RSHOULDER := 22532
+    static VK_PAD_LSHOULDER := 22533
+    static VK_PAD_LTRIGGER := 22534
+    static VK_PAD_RTRIGGER := 22535
+    static VK_PAD_DPAD_UP := 22544
+    static VK_PAD_DPAD_DOWN := 22545
+    static VK_PAD_DPAD_LEFT := 22546
+    static VK_PAD_DPAD_RIGHT := 22547
+    static VK_PAD_START := 22548
+    static VK_PAD_BACK := 22549
+    static VK_PAD_LTHUMB_PRESS := 22550
+    static VK_PAD_RTHUMB_PRESS := 22551
+    static VK_PAD_LTHUMB_UP := 22560
+    static VK_PAD_LTHUMB_DOWN := 22561
+    static VK_PAD_LTHUMB_RIGHT := 22562
+    static VK_PAD_LTHUMB_LEFT := 22563
+    static VK_PAD_LTHUMB_UPLEFT := 22564
+    static VK_PAD_LTHUMB_UPRIGHT := 22565
+    static VK_PAD_LTHUMB_DOWNRIGHT := 22566
+    static VK_PAD_LTHUMB_DOWNLEFT := 22567
+    static VK_PAD_RTHUMB_UP := 22576
+    static VK_PAD_RTHUMB_DOWN := 22577
+    static VK_PAD_RTHUMB_RIGHT := 22578
+    static VK_PAD_RTHUMB_LEFT := 22579
+    static VK_PAD_RTHUMB_UPLEFT := 22580
+    static VK_PAD_RTHUMB_UPRIGHT := 22581
+    static VK_PAD_RTHUMB_DOWNRIGHT := 22582
+    static VK_PAD_RTHUMB_DOWNLEFT := 22583
+}
+struct BATTERY_TYPE extends UInt8 {
+    static BATTERY_TYPE_DISCONNECTED := 0
+    static BATTERY_TYPE_WIRED := 1
+    static BATTERY_TYPE_ALKALINE := 2
+    static BATTERY_TYPE_NIMH := 3
+    static BATTERY_TYPE_UNKNOWN := 255
+}
+struct BATTERY_LEVEL extends UInt8 {
+    static BATTERY_LEVEL_EMPTY := 0
+    static BATTERY_LEVEL_LOW := 1
+    static BATTERY_LEVEL_MEDIUM := 2
+    static BATTERY_LEVEL_FULL := 3
+}
+struct BATTERY_DEVTYPE extends UInt8 {
+    static BATTERY_DEVTYPE_GAMEPAD := 0
+    static BATTERY_DEVTYPE_HEADSET := 1
+}
+struct XINPUT_DEVTYPE extends UInt8 {
+    static XINPUT_DEVTYPE_GAMEPAD := 1
+}
+struct XINPUT_DEVSUBTYPE extends UInt8 {
+    static XINPUT_DEVSUBTYPE_GAMEPAD := 1
+    static XINPUT_DEVSUBTYPE_UNKNOWN := 0
+    static XINPUT_DEVSUBTYPE_WHEEL := 2
+    static XINPUT_DEVSUBTYPE_ARCADE_STICK := 3
+    static XINPUT_DEVSUBTYPE_FLIGHT_STICK := 4
+    static XINPUT_DEVSUBTYPE_DANCE_PAD := 5
+    static XINPUT_DEVSUBTYPE_GUITAR := 6
+    static XINPUT_DEVSUBTYPE_GUITAR_ALTERNATE := 7
+    static XINPUT_DEVSUBTYPE_DRUM_KIT := 8
+    static XINPUT_DEVSUBTYPE_GUITAR_BASS := 11
+    static XINPUT_DEVSUBTYPE_ARCADE_PAD := 19
+}
+struct XINPUT_CAPABILITIES_FLAGS extends UInt16 {
+    static XINPUT_CAPS_VOICE_SUPPORTED := 4
+    static XINPUT_CAPS_FFB_SUPPORTED := 1
+    static XINPUT_CAPS_WIRELESS := 2
+    static XINPUT_CAPS_PMD_SUPPORTED := 8
+    static XINPUT_CAPS_NO_NAVIGATION := 16
+}
+struct XINPUT_GAMEPAD_BUTTON_FLAGS extends UInt16 {
+    static XINPUT_GAMEPAD_DPAD_UP := 1
+    static XINPUT_GAMEPAD_DPAD_DOWN := 2
+    static XINPUT_GAMEPAD_DPAD_LEFT := 4
+    static XINPUT_GAMEPAD_DPAD_RIGHT := 8
+    static XINPUT_GAMEPAD_START := 16
+    static XINPUT_GAMEPAD_BACK := 32
+    static XINPUT_GAMEPAD_LEFT_THUMB := 64
+    static XINPUT_GAMEPAD_RIGHT_THUMB := 128
+    static XINPUT_GAMEPAD_LEFT_SHOULDER := 256
+    static XINPUT_GAMEPAD_RIGHT_SHOULDER := 512
+    static XINPUT_GAMEPAD_A := 4096
+    static XINPUT_GAMEPAD_B := 8192
+    static XINPUT_GAMEPAD_X := 16384
+    static XINPUT_GAMEPAD_Y := 32768
+    static XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE := 7849
+    static XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE := 8689
+    static XINPUT_GAMEPAD_TRIGGER_THRESHOLD := 30
+}
+struct XINPUT_KEYSTROKE_FLAGS extends UInt16 {
+    static XINPUT_KEYSTROKE_KEYDOWN := 1
+    static XINPUT_KEYSTROKE_KEYUP := 2
+    static XINPUT_KEYSTROKE_REPEAT := 4
+}
+struct XINPUT_FLAG extends UInt32 {
+    static XINPUT_FLAG_ALL := 0
+    static XINPUT_FLAG_GAMEPAD := 1
+}
+struct XINPUT_GAMEPAD {
+    wButtons : XINPUT_GAMEPAD_BUTTON_FLAGS
+    bLeftTrigger : UInt8
+    bRightTrigger : UInt8
+    sThumbLX : Int16
+    sThumbLY : Int16
+    sThumbRX : Int16
+    sThumbRY : Int16
+}
+struct XINPUT_STATE {
+    dwPacketNumber : UInt32
+    Gamepad : XINPUT_GAMEPAD
+}
+struct XINPUT_VIBRATION {
+    wLeftMotorSpeed : UInt16
+    wRightMotorSpeed : UInt16
+}
+struct XINPUT_CAPABILITIES {
+    Type : XINPUT_DEVTYPE
+    SubType : XINPUT_DEVSUBTYPE
+    Flags : XINPUT_CAPABILITIES_FLAGS
+    Gamepad : XINPUT_GAMEPAD
+    Vibration : XINPUT_VIBRATION
+}
+struct XINPUT_BATTERY_INFORMATION {
+    BatteryType : BATTERY_TYPE
+    BatteryLevel : BATTERY_LEVEL
+}
+struct XINPUT_KEYSTROKE {
+    VirtualKey : XINPUT_VIRTUAL_KEY
+    Unicode : UInt16
+    Flags : XINPUT_KEYSTROKE_FLAGS
+    UserIndex : UInt8
+    HidCode : UInt8
+}
