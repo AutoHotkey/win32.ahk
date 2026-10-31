@@ -10,5 +10,4 @@ Requirements:
   - AutoHotkey v2.1-alpha... (check `#Requires` at the top of the script).
   - `Win32metadata.winmd` from the [win32metadata NuGet package](https://www.nuget.org/packages/Microsoft.Windows.SDK.Win32Metadata/).
 
-See [source/README.md](source/README.md) for documentation about usage of the projection.
-
+Refer to [Releases](https://github.com/AutoHotkey/win32.ahk/releases), the `output` git branch or `lib/*` tags for usable libraries and usage documentation.
