@@ -505,15 +505,15 @@ BuildModuleForNamespace(ns) {
         PrepareMethod(mp, unset, ns.apiModule)
     
     DirCreate dir := OutputDirectory "\" ns.name
-    FileOpen(dir "\__Init.ahk", 'w').WriteLine("
+    FileOpen(dir "\__Init.ahk", 'w`n').WriteLine("
     (
         #Import Export "Constants.ahk" {*}
         #Import Export "Types.ahk" {*}
         #Import Export "API.ahk" {*}
     )")
-    fApis := FileOpen(dir "\API.ahk", 'w')
-    fConst := FileOpen(dir "\Constants.ahk", 'w')
-    fTypes := FileOpen(dir "\Types.ahk", 'w')
+    fApis := FileOpen(dir "\API.ahk", 'w`n')
+    fConst := FileOpen(dir "\Constants.ahk", 'w`n')
+    fTypes := FileOpen(dir "\Types.ahk", 'w`n')
     requires := '#Requires AutoHotkey ' OutputRequires '`n'
     fTypes.WriteLine requires '#Include "..\_header.ahk"'
     fApis.WriteLine requires '#Include "..\_header.ahk"'
